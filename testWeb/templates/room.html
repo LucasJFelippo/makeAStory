@@ -76,6 +76,72 @@
                 socket.emit('start_game');
             });
     </script>
+
+    <script>
+        const token = localStorage.getItem('jwt_token');
+
+        if (!token) {
+            document.getElementById('status').innerText = '❌ Erro: Você não está logado.';
+        } else {
+            const socket = io('http://localhost:5000/r', {
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                const roomId = localStorage.getItem('current_room');
+                socket.emit('join_room', { room_id: parseInt(roomId) });
+            });
+
+            socket.on('joined_room', data => {
+                document.getElementById('status').innerText =
+                    `✔ Joined room ${data.room_id}`;
+            });
+
+            socket.on('connect_error', err => {
+                // Dispara se o token for inválido
+                document.getElementById('status').innerText =
+                    `❌ ${err.message}`;
+                if (err.message === 'unauthorized') {
+                    // Token expirou ou é inválido
+                    localStorage.removeItem('jwt_token');
+                }
+            });
+
+            socket.on('snippet_broadcast', data => {
+                const chat = document.getElementById('chat');
+                const p = document.createElement('p');
+                p.innerText = '📨 ' + (typeof data === 'string' ? data : data.snippet);
+                chat.appendChild(p);
+                chat.scrollTop = chat.scrollHeight;
+            });
+
+            document.getElementById('sendBtn').addEventListener('click', () => {
+                const input = document.getElementById('inputMsg');
+                const msg = input.value.trim();
+                if (!msg) return;
+                const roomId = localStorage.getItem('current_room');
+                socket.emit('story_snippet', { snippet: msg, room: roomId });
+                input.value = '';
+                input.focus();
+            });
+
+            document.getElementById('inputMsg').addEventListener('keypress', e => {
+                if (e.key === 'Enter') {
+                    document.getElementById('sendBtn').click();
+                }
+            });
+
+            document.getElementById('startGameBtn').addEventListener('click', () => {
+                socket.emit('start_game');
+            });
+        }
+    </script>
+    </body>
+    
+    </html>
+
 </body>
 
 </html>
