@@ -33,13 +33,21 @@
         const socket = io('http://localhost:5000/r');
 
         socket.on('connect', () => {
-            const roomId = localStorage.getItem('current_room');
-            socket.emit('join_room', { room_id: parseInt(roomId) });
-        });
+                const roomId = localStorage.getItem('current_room');
+                socket.emit('join_room', { room_id: parseInt(roomId) }, (ack) => {
+                    if (ack.status === 'ok') {
+                        document.getElementById('status').innerText =
+                            `✔ Joined room ${ack.room_id}`;
+                    } else {
+                        document.getElementById('status').innerText =
+                            `❌ ${ack.msg}`;
+                    }
+                });
+            });
 
-        socket.on('joined_room', data => {
+        socket.on('connect_ack', () => {
             document.getElementById('status').innerText =
-                `✔ Joined room ${data.room_id}`;
+                `✔ Connection stablished`;
         });
 
         socket.on('connect_error', err => {
@@ -50,9 +58,12 @@
 
         socket.on('snippet_broadcast', data => {
             const chat = document.getElementById('chat');
+            data.snippets.forEach(item => {
             const p = document.createElement('p');
-            p.innerText = '📨 ' + (typeof data === 'string' ? data : data.snippet);
+            const shortId = item.sender.slice(0, 5);
+            p.innerText = `${shortId}: ${item.snippet}`;
             chat.appendChild(p);
+            });
             chat.scrollTop = chat.scrollHeight;
         });
 
@@ -61,9 +72,18 @@
             const msg = input.value.trim();
             if (!msg) return;
             const roomId = localStorage.getItem('current_room');
-            socket.emit('story_snippet', { snippet: msg, room: roomId });
-            input.value = '';
-            input.focus();
+            socket.emit('story_snippet', { snippet: msg, room: roomId }, (ack) => {
+            if (ack.status === 'ok') {
+                input.value = '';
+                input.focus();
+            } else {
+                const chat = document.getElementById('chat');
+                const p = document.createElement('p');
+                p.innerText = `❌ ${ack.msg}`;
+                chat.appendChild(p);
+                chat.scrollTop = chat.scrollHeight;
+            }
+            });
         });
 
         document.getElementById('inputMsg').addEventListener('keypress', e => {
@@ -73,8 +93,32 @@
         });
 
         document.getElementById('startGameBtn').addEventListener('click', () => {
-                socket.emit('start_game');
+            socket.emit('start_game', (ack) => {
+            if (ack && ack.status === 'error') {
+                const chat = document.getElementById('chat');
+                const p = document.createElement('p');
+                p.innerText = `❌ ${ack.msg}`;
+                chat.appendChild(p);
+                chat.scrollTop = chat.scrollHeight;
+            }
             });
+        });
+
+        socket.on('game_started', data => {
+            const chat = document.getElementById('chat');
+            const p    = document.createElement('p');
+            p.innerText = `🎮 Game started by ${data.triggerer}`;
+            chat.appendChild(p);
+            chat.scrollTop = chat.scrollHeight;
+        });
+
+        socket.on('round_started', data => {
+            const chat = document.getElementById('chat');
+            const p    = document.createElement('p');
+            p.innerText = `🕒 Round started by ${data.triggerer}`;
+            chat.appendChild(p);
+            chat.scrollTop = chat.scrollHeight;
+        });
     </script>
 </body>
 
