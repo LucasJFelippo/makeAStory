@@ -78,7 +78,6 @@ function ChatRoom() {
         e.preventDefault();
         if (socket && myMessage) {
             socket.emit('story_snippet', { snippet: myMessage, room: roomId }, (ack) => {
-
                 if (ack && ack.status === 'ok') {
                     setMyMessage('');
                 } else {
