@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Socket.IO Chat</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #chat {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        #chat p {
+            margin: 5px 0;
+        }
+
+        #chat .status {
+            font-style: italic;
+            color: #888;
+        }
+
+        #chat .story {
+            font-weight: bold;
+            color: #33a;
+        }
+
+        #chat .error {
+            font-weight: bold;
+            color: #a33;
+        }
+
+        #controls {
+            display: flex;
+        }
+
+        #inputMsg {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TESTE DE CACHE 123</h1>
+
+    <div id="status">Conectando...</div>
+
+    <div id="chat"></div>
+
+    <div id="controls">
+        <input type="text" id="inputMsg" placeholder="Type your story snippet..." />
+        <button id="sendBtn">Send</button>
+    </div>
+    <br>
+    <button id="startGameBtn">Start Game</button>
+
+    <script>
+        // --- INÍCIO DA LÓGICA DE AUTENTICAÇÃO ---
+
+        // 2. Pega o token do localStorage
+        const jwtToken = localStorage.getItem('jwt_token');
+
+        if (!jwtToken) {
+            document.getElementById('status').innerText = '❌ Erro: Token não encontrado. Faça login primeiro.';
+        } else {
+            // 3. Conecta ao namespace /r ENVIANDO o token
+            const socket = io('http://localhost:5000/r', {
+                auth: {
+                    token: jwtToken
+                }
+            });
+
+            setupSocketListeners(socket);
+        }
+
+        // --- FIM DA LÓGICA DE AUTENTICAÇÃO ---
+
+
+        function setupSocketListeners(socket) {
+
+            // Servidor confirmou a conexão
+            socket.on('connect_confirm', (data) => {
+                document.getElementById('status').innerText = `✔ Conectado (SID: ${data.sid})`;
+
+                // 4. AGORA, após conectar, entra na sala
+                const roomId = localStorage.getItem('current_room');
+                if (!roomId) {
+                    document.getElementById('status').innerText = '❌ Erro: ID da sala não encontrado no localStorage.';
+                    return;
+                }
+
+                // 5. Emite o 'join_room' (com a correção do 'room_id' como string)
+                socket.emit('join_room', { room_id: roomId }, (ack) => {
+                    if (ack.status === 'ok') {
+                        document.getElementById('status').innerText = `✔ Conectado e na sala ${ack.room_id}`;
+                        addMessageToChat(`Você entrou na sala ${ack.room_id}.`, 'status');
+                    } else {
+                        document.getElementById('status').innerText = `❌ ${ack.msg}`;
+                        addMessageToChat(`Falha ao entrar na sala: ${ack.msg}`, 'error');
+                    }
+                });
+            });
+
+            // Erro de conexão (ex: token inválido)
+            socket.on('connect_error', err => {
+                document.getElementById('status').innerText = `❌ ${err.message}`;
+                if (err.message.includes('unauthorized')) {
+                    addMessageToChat('Erro de autorização. Seu token pode estar expirado. Faça login novamente.', 'error');
+                }
+            });
+
+            // --- Lógica do Jogo (Ouvintes) ---
+
+            // Recebe um snippet de alguém
+            socket.on('snippet_broadcast', data => {
+                addMessageToChat(`${data.sender_username}: ${data.snippet}`, null);
+            });
+
+            // Alguém enviou (mas não o quê)
+            socket.on('snippet_received', data => {
+                addMessageToChat(`${data.username} enviou sua parte...`, 'status');
+            });
+
+            // Mensagem de status (alguém entrou/saiu)
+            socket.on('status_update', data => {
+                addMessageToChat(data.msg, 'status');
+            });
+
+            // Jogo começou
+            socket.on('game_started', data => {
+                addMessageToChat(`🎮 Jogo iniciado por ${data.triggerer}!`, 'status');
+            });
+
+            // ===== 6. OUVINTE CORRIGIDO PARA A NOVA RODADA =====
+            socket.on('round_started', data => {
+                addMessageToChat(`🕒 Rodada ${data.round} começou! (Iniciada por: ${data.triggerer})`, 'status');
+                // Reabilita os botões para a nova rodada
+                document.getElementById('inputMsg').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+            });
+
+            // Rodada terminou, snippets de todos
+            socket.on('round_ended', data => {
+                addMessageToChat(`Rodada finalizada. Esperando a IA...`, 'status');
+                // Desabilita os botões enquanto a IA pensa
+                document.getElementById('inputMsg').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+
+                data.snippets.forEach(item => {
+                    addMessageToChat(`> ${item.sender_username}: ${item.snippet}`, 'story');
+                });
+            });
+
+            // ===== 7. OUVINTE QUE FALTAVA (PARA A IA) =====
+            socket.on('new_story_part', data => {
+                addMessageToChat(`📖 IA: ${data.text}`, 'story');
+            });
+
+            // Erro geral do servidor
+            socket.on('error', data => {
+                addMessageToChat(data.msg, 'error');
+            });
+
+
+            // --- Lógica de Envio (Cliques) ---
+
+            document.getElementById('sendBtn').addEventListener('click', () => {
+                const input = document.getElementById('inputMsg');
+                const msg = input.value.trim();
+                if (!msg) return;
+
+                socket.emit('story_snippet', { snippet: msg }, (ack) => {
+                    if (ack.status === 'ok') {
+                        input.value = '';
+                        addMessageToChat('Seu snippet foi enviado.', 'status');
+                    } else {
+                        addMessageToChat(`Erro: ${ack.msg}`, 'error');
+                    }
+                });
+            });
+
+            document.getElementById('inputMsg').addEventListener('keypress', e => {
+                if (e.key === 'Enter') {
+                    document.getElementById('sendBtn').click();
+                }
+            });
+
+            document.getElementById('startGameBtn').addEventListener('click', () => {
+                addMessageToChat('Tentando iniciar o jogo...', 'status');
+                socket.emit('start_game', (ack) => {
+                    if (ack && ack.status === 'error') {
+                        addMessageToChat(`Falha ao iniciar: ${ack.msg}`, 'error');
+                    }
+                });
+            });
+
+            function addMessageToChat(message, typeClass) {
+                const chat = document.getElementById('chat');
+                const p = document.createElement('p');
+                if (typeClass) {
+                    p.className = typeClass;
+                }
+                p.innerText = message;
+                chat.appendChild(p);
+                chat.scrollTop = chat.scrollHeight;
+            }
+        }
+    </script>
+</body>
+
+</html>
