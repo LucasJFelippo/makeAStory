@@ -1,0 +1,221 @@
+body {
+    margin: 0;
+    font-family: "Consolas",
+        "Monaco",
+        "Lucida Console",
+        monospace;
+    background-color: #0a0a0a;
+    font-size: large;
+}
+
+.chat-layout {
+    display: flex;
+    height: 99vh;
+    width: 99.5vw;
+    overflow: hidden;
+    border: 1px solid #0d0d0d;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+}
+
+/* --- Drawer --- */
+.drawer {
+    width: 250px;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-right: 1px solid #ff00ff;
+    padding: 20px;
+    box-sizing: border-box;
+    color: #e0e0e0;
+}
+
+.drawer h3 {
+    margin-top: 0;
+    color: #ff00ff;
+    text-shadow: 0 0 5px #ff00ff;
+}
+
+.drawer a {
+    text-decoration: none;
+    color: #00ffcc;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 15px;
+}
+
+.drawer a:hover {
+    color: #ffffff;
+    text-shadow: 0 0 8px #00ffcc;
+}
+
+.drawer .current-room-info {
+    margin-top: 20px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+/* --- A Área Principal do Chat --- */
+.chat-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: 100vh;
+    background-image: url("/Background.jpg");
+    background-size: cover;
+    background-position: center center;
+    background-attachment: fixed;
+    position: relative;
+    background-blend-mode: multiply;
+    background-color: rgba(0, 0, 0, 0.6);
+    position: relative;
+}
+
+/* Cabeçalho */
+.chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ff00ff;
+
+    background: #111111;
+    box-shadow: 0 15px 25px rgba(255, 0, 255, 0.1);
+    z-index: 10;
+
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #ffffff;
+}
+
+.status-bar {
+    font-size: 0.8em;
+    color: #00ffcc;
+
+}
+
+/* A lista de mensagens */
+.message-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: #ff00ff #1a1a1a;
+}
+
+.message-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.message-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+    background-color: #ff00ff;
+    border-radius: 4px;
+}
+
+.user-message,
+.system-message,
+.ai-message {
+    position: relative;
+    z-index: 2;
+}
+
+/* Estilos das mensagens */
+.user-message {
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    background: rgba(0, 255, 204, 0.2);
+    border: 1px solid #00ffcc;
+    color: #ffffff;
+    border-radius: 12px;
+    max-width: 70%;
+    align-self: flex-end;
+    word-wrap: break-word;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+}
+
+.user-message strong {
+    margin-right: 5px;
+    color: #00ffcc;
+}
+
+.system-message {
+    margin: 10px 0;
+    font-style: italic;
+    font-size: 0.9em;
+    color: #ff00ff;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
+}
+
+/* --- Ações e Input --- */
+
+/* Botão de "Gerar História" */
+.chat-actions {
+    padding: 10px 20px;
+    border-top: 1px solid #ff00ff;
+    background: rgba(17, 17, 17, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 10;
+}
+
+/* Botão "Gerar História" */
+.chat-actions button {
+    background: transparent;
+    color: #39ff14;
+    border: 1px solid #39ff14;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.chat-actions button:hover {
+    background: #39ff14;
+    color: #0a0a0a;
+    box-shadow: 0 0 15px #39ff14;
+}
+
+/* Formulário de envio de mensagem */
+.message-input-form {
+    display: flex;
+    padding: 10px 20px;
+    border-top: 1px solid #ff00ff;
+    background: rgba(17, 17, 17, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 10;
+}
+
+.message-input-form input {
+    flex-grow: 1;
+    padding: 10px 15px;
+    border: 1px solid #00ffcc;
+    border-radius: 4px;
+    margin-right: 10px;
+    background: #0a0a0a;
+    color: #ffffff;
+    font-family: inherit;
+}
+
+.message-input-form input::placeholder {
+    color: #888;
+}
+
+.message-input-form button {
+    padding: 10px 20px;
+    border: 1px solid #00ffcc;
+    background: #00ffcc;
+    color: #0a0a0a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.message-input-form button:hover {
+    box-shadow: 0 0 15px #00ffcc;
+}

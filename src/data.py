@@ -2,7 +2,13 @@ from enum import Enum
 from string import Template
 
 
-GPT_ENTRY_PROMPT = '''We are playing a collaborative storytelling game, in this game you and other players will create a compelling and cool story together, and in this game you are the game master. The game are played in rounds, each round each player will write a short story snippet, your task is to mix together all the story snippets of the players, in a short story. After that another round start and again the players send another snippets so we can continue the story.\n\n The story snippets will be at maximum 100 characters long, and your responses must be 1-2 paragraphs of lore (you can write either 1 or 2 paragraphs, at your discretion), and have at maximum 1000 characters long. Try to be as creative as possible, but keeping the cohesion between the snippets and mainly the rounds. You don't have to use all snippets ideas at once, if you judge a idea is a good card to keep for the future you can, but you must bring it back as soon as it fits the story, a idea can be 'held' for at most 5 rounds.'''
+GPT_ENTRY_PROMPT = '''We are playing a collaborative storytelling game, 
+in this game you and other players will create a compelling and cool story together, and in this game you are the game master. 
+The game are played in rounds, each round each player will write a short story snippet, your task is to mix together all the story snippets of the players, in a short story. 
+After that another round start and again the players send another snippets so we can continue the story.\n\n 
+The story snippets will be at maximum 100 characters long, and your responses must be 1-2 paragraphs of lore (you can write either 1 or 2 paragraphs, at your discretion), 
+and have at maximum 1000 characters long. Try to be as creative as possible, but keeping the cohesion between the snippets and mainly the rounds. You don't have to use all snippets ideas at once, 
+if you judge a idea is a good card to keep for the future you can, but you must bring it back as soon as it fits the story, a idea can be 'held' for at most 5 rounds. Do it in Brazilian Portuguese.'''
 
 GPT_SNIPPETS_TEMPLATE = Template('''Round $cround snippets:
 
@@ -79,7 +85,7 @@ USER_ROOM_MAP = {}
 
 MAX_ROOM_SIZE = 5
 
-MAX_SNIPPET_SIZE = 100   # in characters
+MAX_SNIPPET_SIZE = 200   # in characters
 
 
 '''

@@ -176,7 +176,23 @@ class RoomNS(Namespace):
             'content': prompt
         })
         
-        response = submit_round(room['history_parsed'])
+        response_text = submit_round(room['history_parsed'])
+        
+        room['history_parsed'].append({
+            'role': 'assistant',
+            'content': response_text
+        })
+        
+        response_text = submit_round(room['history_parsed'])
         print('--------------------------')
-        print(response)
+        print(response_text)
         print('--------------------------')
+        
+        ai_data = {
+            'type': 'ai_response',
+            'story': response_text,
+            'image_url': None, 
+            'song_url': None  
+        }
+        
+        self.socketio.emit('ai_response', ai_data, namespace='/r', room=room_id)
