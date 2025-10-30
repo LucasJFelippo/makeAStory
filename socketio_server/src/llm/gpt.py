@@ -13,4 +13,5 @@ def submit_round(input_array):
         store = False
     )
 
-    return response
+    response_text = response.output[1].content[0].text
+    return response_text

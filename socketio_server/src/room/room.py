@@ -1,3 +1,4 @@
+from urllib import response
 from flask import request
 from flask_socketio import Namespace, emit
 
@@ -176,13 +177,22 @@ class RoomNS(Namespace):
             'content': prompt
         })
         
-        response = submit_round(room['history_parsed'])
+        llm_response = 'Placeholder Response.'
+        
+        # llm_response = submit_round(room['history_parsed'])
         
         room['history_parsed'].append({
             'role': 'assistant',
-            'content': response
+            'content': llm_response
         })
-        
+
+        ai_data = {
+            'type': 'ai_response',
+            'story': llm_response,
+            'image_url': None,
+            'song_url': None
+        }
+
         members = room['room_members']
         for member_id, member in members.items():
-            emit('ai_response', {'snippets': snippets}, to=member_id)
+            self.socketio.emit('ai_response', ai_data, namespace='/r', to=member_id)
