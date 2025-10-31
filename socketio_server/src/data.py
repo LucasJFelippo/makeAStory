@@ -137,11 +137,21 @@ story_snippet: client -> server
         snippet: str
 
     Ack:
-        status:
+        status: str
             - ok                 snippet received, but didn't cause round to end
             - error
         msg: str (only set if status is error)
             - not in room        user is not in a room
             - room not reading   room is not in reading state
             - size limit         snippet bigger than MAX_SNIPPET_SIZE
+
+ai_response: server -> client
+    Response from the AIs
+
+    Params:
+        type: str
+            - ai_response
+        story: str
+        image_url: str
+        song_url: str
 '''
