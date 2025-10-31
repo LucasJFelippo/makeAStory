@@ -51,26 +51,7 @@ ROOMS_SAMPLE_STRUCTURE = {
     }
 }
 
-ROOMS = {
-    0: {
-        'room_id': 0,
-        'room_name': 'Sala do Luquinha',
-
-        'room_state': RoomState.WAITING,
-
-        'room_members': {},
-
-        'pending': 99,
-        'timer': None,
-
-        'history': [],
-        'history_parsed': [{
-                'role': 'developer',
-                'content': GPT_ENTRY_PROMPT
-            }],
-        'current_round': 0
-    }
-}
+ROOMS = {}
 
 USER_ROOM_MAP = {}
 

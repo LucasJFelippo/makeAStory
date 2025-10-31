@@ -3,8 +3,13 @@ import requests
 import os
 from flask_socketio import Namespace, emit, join_room, leave_room
 from flask_jwt_extended import decode_token
-from models import User, db
+from models import User, db, GameRoom
 import json
+
+from src.data import (
+    ROOMS, USER_ROOM_MAP, RoomState, MAX_ROOM_SIZE, 
+    MAX_SNIPPET_SIZE, GPT_SNIPPETS_TEMPLATE, GPT_ENTRY_PROMPT
+)
 
 from src.data import ROOMS, USER_ROOM_MAP, RoomState, MAX_ROOM_SIZE, MAX_SNIPPET_SIZE, GPT_SNIPPETS_TEMPLATE
 from src.llm.gpt import submit_round
@@ -78,17 +83,40 @@ class RoomNS(Namespace):
             logger.warning(f"room_id inválido recebido: {room_id_from_client}")
             return {'status': 'error', 'msg': 'room_id deve ser um número'}
 
-        if not room_id in ROOMS:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) pediu para entrar na sala {room_id} (inexistente)')
+        game_room_db = GameRoom.query.get(room_id)
+
+        if not game_room_db:
+            logger.warning(f'[ROOM] User {username} (ID: {user_id}) pediu para entrar na sala {room_id} (inexistente no DB)')
             return {'status': 'error', 'msg': "A sala não existe.", 'room_id': room_id}
         
+        if room_id not in ROOMS:
+            logger.info(f"[ROOM {room_id}] Sala '{game_room_db.room_code}' está inativa. Ativando e hidratando cache...")
+            ROOMS[room_id] = {
+                'room_id': game_room_db.id,
+                'room_name': game_room_db.room_code,
+                'room_state': RoomState.WAITING,
+                'room_members': {},
+                'pending': 0,
+                'timer': None,
+                'history': [],
+                'history_parsed': [{
+                    'role': 'developer',
+                    'content': GPT_ENTRY_PROMPT
+                }],
+                'current_round': 0
+            }
+        
         if len(ROOMS[room_id]['room_members']) >= MAX_ROOM_SIZE:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia)')
+            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia no cache)')
             return {'status': 'error', 'msg': 'A sala está cheia', 'room_id': room_id}
+        
+        # O usuário já está na sala?
+        if user_id in ROOMS[room_id]['room_members']:
+             logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) já está na sala.")
+        else:
+            logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou')
 
-        logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou')
-
-        # Adiciona o usuário (pelo ID do DB) à sala
+        # Adiciona o usuário (pelo ID do DB) à sala (em memória)
         ROOMS[room_id]['room_members'][user_id] = {
             'user_id': user_id,
             'username': username, # Armazena o username
@@ -97,7 +125,7 @@ class RoomNS(Namespace):
         }
         USER_ROOM_MAP[user_id] = room_id
         
-        # Inscreve o cliente no canal da sala para broadcasts
+        # Cliente entra no canal da sala para broadcasts
         join_room(room_id)
         
         # Avisa os outros que o usuário entrou
@@ -155,6 +183,20 @@ class RoomNS(Namespace):
             emit('status_update', {'msg': f'{username} saiu.'}, to=room_id)
             logger.info(f"User {username} (ID: {user_id}) removido da sala {room_id}")
 
+            if len(room['room_members']) == 0:
+                logger.info(f"[ROOM {room_id}] A sala está vazia. Removendo do cache de memória.")
+                ROOMS.pop(room_id, None)
+                
+                try:
+                    game_room_db = GameRoom.query.get(room_id)
+                    if game_room_db:
+                        game_room_db.status = 'LOBBY'
+                        # game_room_db.final_story_text = ""
+                        db.session.commit()
+                except Exception as e:
+                    logger.error(f"Erro ao resetar status da sala {room_id} no DB: {e}")
+                    db.session.rollback()
+
         # Remove o usuário do mapa global
         if user_id in USER_ROOM_MAP:
             USER_ROOM_MAP.pop(user_id)
@@ -186,6 +228,15 @@ class RoomNS(Namespace):
             # return {'status': 'error', 'msg': 'room not waiting'}
 
         logger.info(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} started the game')
+
+        try:
+            game_room_db = GameRoom.query.get(USER_ROOM_MAP[user_id])
+            if game_room_db:
+                game_room_db.status = 'IN_PROGRESS'
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Erro ao atualizar status da sala {USER_ROOM_MAP[user_id]} no DB: {e}")
+            db.session.rollback()
 
         self.start_game(USER_ROOM_MAP[user_id], user_id)
 
@@ -344,8 +395,22 @@ class RoomNS(Namespace):
                 tags_str = submit_round(theme_prompt).strip().lower()
                 theme = tags_str.replace(',', ' ').replace('  ', ' ')
                 logger.info(f"[ROOM {room_id}] Temas extraídos: {theme}")
+                
             except Exception as e:
                 logger.warning(f"[ROOM {room_id}] Não foi possível extrair os temas: {e}")
+
+            try:
+                game_room_db = GameRoom.query.get(room_id)
+                if game_room_db:
+                    if game_room_db.final_story_text is None:
+                        game_room_db.final_story_text = ""
+                    game_room_db.final_story_text += f"\n\n--- Round {current_round} ---\n{ia_text_response}"
+                    db.session.commit()
+
+            except Exception as e:
+                logger.error(f"Erro ao salvar história no DB da sala {room_id}: {e}")
+                db.session.rollback()
+                
 
             if theme:
                 try:
