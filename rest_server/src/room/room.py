@@ -1,4 +1,6 @@
 from flask import session, request
+import requests
+import os
 from flask_socketio import Namespace, emit, join_room, leave_room
 from flask_jwt_extended import decode_token
 from models import User
@@ -176,12 +178,12 @@ class RoomNS(Namespace):
         self.start_game(USER_ROOM_MAP[user_id], user_id)
 
 
-    def on_story_snippet(self, data): # ADICIONAR USUARIO
+    def on_story_snippet(self, data):
         user_id, username = self._get_auth_info()
 
         if not user_id in USER_ROOM_MAP:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou enviar snippet mas não está em sala')
-            return {'status': 'error', 'msg': 'Você não está em uma sala'}
+            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tried to send a snippet but is not in a room')
+            return {'status': 'error', 'msg': 'not in room'}
 
         snippet_data = data
         if isinstance(data, str):
@@ -189,20 +191,20 @@ class RoomNS(Namespace):
                 snippet_data = json.loads(data)
             except json.JSONDecodeError:
                 logger.error(f"Erro ao decodificar JSON do on_story_snippet: {data}")
-                return {'status': 'error', 'msg': 'Dados de snippet inválidos'}
+                return {'status': 'error', 'msg': 'Invalid snippet data'}
 
         snippet = snippet_data.get('snippet')
         if not snippet:
-             return {'status': 'error', 'msg': 'Snippet não pode ser vazio'}
+             return {'status': 'error', 'msg': 'Forbidden empty snippet!'}
 
         room = ROOMS[USER_ROOM_MAP[user_id]]
         if room['room_state'] != RoomState.SNIPPETING:
-            logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} tentou enviar snippet mas o estado é {room['room_state']}')
-            return {'status': 'error', 'msg': 'Não é hora de enviar snippets'}
+            logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} tried to send a snippet on a {room['room_state']} room')
+            return {'status': 'error', 'msg': 'Not the time to send snippets'}
         
         if len(snippet) > MAX_SNIPPET_SIZE:
             logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} enviou snippet muito longo')
-            return {'status': 'error', 'msg': f'Snippet muito longo (max: {MAX_SNIPPET_SIZE})'}
+            return {'status': 'error', 'msg': f'Snippet oversized (max: {MAX_SNIPPET_SIZE})'}
 
         members = room['room_members']
         if not members[user_id]['submitted']:
@@ -310,7 +312,62 @@ class RoomNS(Namespace):
             logger.info(f"[ROOM {room_id}] Resposta da IA recebida.")
             logger.info(ia_text_response)
 
-            self.socketio.emit('new_story_part', {'text': ia_text_response}, to=room_id)
+            theme = None
+            music_url = None
+
+            try:
+                theme_prompt = [
+                    {
+                        'role': 'system', 
+                        'content': (
+                            "Sua tarefa é extrair o 'clima' ou 'sentimento' de um texto. "
+                            "Forneça de 5 a 7 tags em inglês que descrevam o GÊNERO (ex: medieval fantasy, sci-fi) "
+                            ",os instrumentos a serem utilizados na musica e a EMOÇÃO (ex: epic, battle, sad, mysterious, rainy), não os objetos. "
+                            "EVITE tags de objetos literais como 'dragon', 'bard' ou 'sword'. "
+                            "Responda apenas com as tags separadas por vírgula."
+                        )
+                    },
+                    {'role': 'user', 'content': ia_text_response}
+                ]
+                tags_str = submit_round(theme_prompt).strip().lower()
+                theme = tags_str.replace(',', ' ').replace('  ', ' ')
+                logger.info(f"[ROOM {room_id}] Temas extraídos: {theme}")
+            except Exception as e:
+                logger.warning(f"[ROOM {room_id}] Não foi possível extrair os temas: {e}")
+
+            if theme:
+                try:
+                    JAMENDO_CLIENT_ID = os.getenv('JAMENDO_CLIENT_ID')
+                    if JAMENDO_CLIENT_ID:
+                        jamendo_url = "https://api.jamendo.com/v3.0/tracks/"
+                        params = {
+                            'client_id': JAMENDO_CLIENT_ID,
+                            'format': 'json',
+                            'limit': 1,
+                            'search': theme,
+                            'order': 'relevance',
+                            'vocalinstrumental': 'instrumental'
+                        }
+                        r = requests.get(jamendo_url, params=params, timeout=5)
+                        r.raise_for_status()
+                        jamendo_data = r.json()
+                        
+                        if jamendo_data.get('results') and len(jamendo_data['results']) > 0:
+                            music_url = jamendo_data['results'][0].get('audio')
+                            logger.info(f"[ROOM {room_id}] URL de música do Jamendo encontrada: {music_url}")
+                        else:
+                            logger.warning(f"[ROOM {room_id}] Nenhuma música encontrada no Jamendo para o tema: {theme}")
+                    else:
+                        logger.warning(f"[ROOM {room_id}] JAMENDO_CLIENT_ID não configurada. Pulando música.")
+                except Exception as e:
+                    logger.error(f"[ROOM {room_id}] Erro ao chamar API do Jamendo: {e}")
+
+
+            self.socketio.emit('new_story_part', {
+                'text': ia_text_response,
+                'music_url': music_url
+            }, to=room_id)
+            
             self.start_round(room_id, 'ia_finished')
 
         except Exception as e:
