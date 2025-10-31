@@ -3,7 +3,7 @@ import requests
 import os
 from flask_socketio import Namespace, emit, join_room, leave_room
 from flask_jwt_extended import decode_token
-from models import User
+from models import User, db
 import json
 
 from src.data import ROOMS, USER_ROOM_MAP, RoomState, MAX_ROOM_SIZE, MAX_SNIPPET_SIZE, GPT_SNIPPETS_TEMPLATE
@@ -159,6 +159,18 @@ class RoomNS(Namespace):
         if user_id in USER_ROOM_MAP:
             USER_ROOM_MAP.pop(user_id)
         
+        try:
+            user = User.query.get(user_id)
+            if user and user.is_guest:
+                logger.info(f"Convidado {username} (ID: {user_id}) desconectou. Removendo do banco de dados.")
+                db.session.delete(user)
+                db.session.commit()
+                logger.info(f"Convidado {username} (ID: {user_id}) removido com sucesso.")
+
+        except Exception as e:
+            logger.error(f"Erro ao tentar remover convidado {user_id}: {e}")
+            db.session.rollback()
+        
 
     def on_start_game(self):
         user_id, username = self._get_auth_info()
@@ -178,12 +190,12 @@ class RoomNS(Namespace):
         self.start_game(USER_ROOM_MAP[user_id], user_id)
 
 
-    def on_story_snippet(self, data):
+    def on_story_snippet(self, data): # ADICIONAR USUARIO
         user_id, username = self._get_auth_info()
 
         if not user_id in USER_ROOM_MAP:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tried to send a snippet but is not in a room')
-            return {'status': 'error', 'msg': 'not in room'}
+            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou enviar snippet mas não está em sala')
+            return {'status': 'error', 'msg': 'Você não está em uma sala'}
 
         snippet_data = data
         if isinstance(data, str):
@@ -191,20 +203,20 @@ class RoomNS(Namespace):
                 snippet_data = json.loads(data)
             except json.JSONDecodeError:
                 logger.error(f"Erro ao decodificar JSON do on_story_snippet: {data}")
-                return {'status': 'error', 'msg': 'Invalid snippet data'}
+                return {'status': 'error', 'msg': 'Dados de snippet inválidos'}
 
         snippet = snippet_data.get('snippet')
         if not snippet:
-             return {'status': 'error', 'msg': 'Forbidden empty snippet!'}
+             return {'status': 'error', 'msg': 'Snippet não pode ser vazio'}
 
         room = ROOMS[USER_ROOM_MAP[user_id]]
         if room['room_state'] != RoomState.SNIPPETING:
-            logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} tried to send a snippet on a {room['room_state']} room')
-            return {'status': 'error', 'msg': 'Not the time to send snippets'}
+            logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} tentou enviar snippet mas o estado é {room['room_state']}')
+            return {'status': 'error', 'msg': 'Não é hora de enviar snippets'}
         
         if len(snippet) > MAX_SNIPPET_SIZE:
             logger.warning(f'[ROOM {USER_ROOM_MAP[user_id]}] User {username} enviou snippet muito longo')
-            return {'status': 'error', 'msg': f'Snippet oversized (max: {MAX_SNIPPET_SIZE})'}
+            return {'status': 'error', 'msg': f'Snippet muito longo (max: {MAX_SNIPPET_SIZE})'}
 
         members = room['room_members']
         if not members[user_id]['submitted']:

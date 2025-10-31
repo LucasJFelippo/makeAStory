@@ -21,14 +21,16 @@ class User(db.Model):
     public_id = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    password_hash = db.Column(db.String(128), nullable=True)
     
+    is_guest = db.Column(db.Boolean, default=False, nullable=False)
+
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
-    segments = db.relationship('StorySegment', back_populates='author', lazy=True)
+    segments = db.relationship('StorySegment', back_populates='author', lazy=True, cascade="all, delete-orphan")
     game_rooms = db.relationship('GameRoom', secondary=game_participants, 
                                  back_populates='participants', lazy='dynamic')
     

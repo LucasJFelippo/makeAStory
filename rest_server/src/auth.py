@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
@@ -47,13 +48,44 @@ def login():
 
     user = User.query.filter_by(username=username).first()
 
-    if user and user.check_password(password):
+    if user and not user.is_guest and user.check_password(password):
         user.last_login = datetime.utcnow()
         db.session.commit()
         access_token = create_access_token(identity=str(user.id))
         return jsonify(access_token=access_token)
 
     return jsonify({"msg": "Usuário ou senha inválidos"}), 401
+
+@auth_bp.route('/guest_login', methods=['POST'])
+def guest_login():
+    data = request.get_json()
+    username = data.get('username')
+
+    if not username:
+        return jsonify({"msg": "Campo 'username' é obrigatório"}), 400
+
+    user = User.query.filter_by(username=username).first()
+
+    # Se o nome de usuário já existe E pertence a um usuário registrado, rejeita.
+    if user and not user.is_guest:
+        return jsonify({"msg": "Nome de usuário já em uso."}), 409
+
+    # Se o usuário não existe, cria um novo usuário convidado
+    if not user:
+        user = User(username=username)
+        user.is_guest = True
+            
+        db.session.add(user)
+        db.session.commit()
+    
+    # Se 'user' existe e é 'is_guest', ele simplesmente loga.
+    
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+    
+    # Cria token de acesso para convidado
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify(access_token=access_token)
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
