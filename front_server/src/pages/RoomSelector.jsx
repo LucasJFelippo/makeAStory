@@ -79,10 +79,6 @@ function RoomSelector() {
 
                     {rooms.map(sala => (
                         <li key={sala.room_id} className="room-list-item">
-                            {/* MUDANÇA IMPORTANTE:
-                              O lobby.py envia 'room_id' (numérico) e 'room_name' (o código da sala).
-                              Nós navegamos para o ID numérico, pois é o que o room.py espera!
-                            */}
                             <Link to={`/chat/${sala.room_id}`}>
                                 {sala.room_name}
                                 <span style={{ float: 'right' }}>({sala.members} / {5})</span>

@@ -91,3 +91,50 @@
     text-align: center;
     margin-bottom: 1rem;
 }
+
+.auth-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #888;
+    margin: 1.5rem 0;
+}
+
+.auth-separator::before,
+.auth-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ff00ff;
+    opacity: 0.3;
+}
+
+.auth-separator:not(:empty)::before {
+    margin-right: .25em;
+}
+
+.auth-separator:not(:empty)::after {
+    margin-left: .25em;
+}
+
+/* Estilo para o botão de convidado (verde neon) */
+.guest-btn {
+    width: 100%;
+    padding: 10px 20px;
+    border: 1px solid #39ff14;
+    /* Verde neon */
+    background: transparent;
+    color: #39ff14;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1em;
+    transition: all 0.2s ease;
+    margin-top: 1rem;
+}
+
+.guest-btn:hover {
+    background: #39ff14;
+    color: #0a0a0a;
+    box-shadow: 0 0 15px #39ff14;
+}

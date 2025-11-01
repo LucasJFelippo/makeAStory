@@ -83,7 +83,7 @@ class RoomNS(Namespace):
         except (ValueError, TypeError):
             logger.warning(f"room_id inválido recebido: {room_id_from_client}")
             return {'status': 'error', 'msg': 'room_id deve ser um número'}
-
+        
         game_room_db = GameRoom.query.get(room_id)
 
         if not game_room_db:
@@ -130,7 +130,7 @@ class RoomNS(Namespace):
         join_room(room_id)
         
         # Avisa os outros que o usuário entrou
-        emit('status_update', {'msg': f'{username} entrou na sala.'}, to=room_id, include_self=False)
+        emit('status_update', {'msg': f'{username} entrou na sala.'}, to=room_id, namespace='/r', include_self=False)
 
         return {'status': 'ok', 'room_id': room_id}
 
@@ -181,7 +181,7 @@ class RoomNS(Namespace):
                 room['room_members'].pop(user_id)
             
             # Avisa os outros que o usuário saiu
-            emit('status_update', {'msg': f'{username} saiu.'}, to=room_id)
+            emit('status_update', {'msg': f'{username} saiu.'}, to=room_id, namespace='/r')
             logger.info(f"User {username} (ID: {user_id}) removido da sala {room_id}")
 
             if len(room['room_members']) == 0:

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import './AuthForm.css'; // Importa o CSS que criamos
+import './AuthForm.css';
 
 const LOGIN_URL = 'http://localhost:5000/auth/login';
+const GUEST_LOGIN_URL = 'http://localhost:5000/auth/guest_login';
 
 function LoginPage() {
     const [username, setUsername] = useState('');
@@ -16,7 +17,6 @@ function LoginPage() {
         setError(''); // Limpa erros antigos
 
         try {
-            //
             const response = await axios.post(LOGIN_URL, {
                 username: username,
                 password: password
@@ -35,6 +35,34 @@ function LoginPage() {
                 setError(err.response.data.msg);
             } else {
                 // Erro de rede
+                setError('Não foi possível conectar ao servidor.');
+            }
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        setError('');
+        if (!username) {
+            setError('O nome de usuário é obrigatório para entrar como convidado.');
+            return;
+        }
+
+        try {
+            //
+            const response = await axios.post(GUEST_LOGIN_URL, {
+                username: username
+            });
+
+            // Login de convidado com sucesso
+            const token = response.data.access_token;
+            localStorage.setItem('token', token); // Salva o token
+
+            navigate('/rooms'); // Redireciona para as salas
+
+        } catch (err) {
+            if (err.response) {
+                setError(err.response.data.msg);
+            } else {
                 setError('Não foi possível conectar ao servidor.');
             }
         }
@@ -64,11 +92,21 @@ function LoginPage() {
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        required
+                    // required
                     />
                 </div>
 
                 <button type="submit">Entrar</button>
+
+                <div className="auth-separator">OU</div>
+
+                <button
+                    type="button" // Importante: 'type="button"' impede o envio do formulário
+                    className="guest-btn"
+                    onClick={handleGuestLogin}
+                >
+                    Entrar como Convidado
+                </button>
 
                 <div className="auth-form-link">
                     <p>Não tem uma conta? <Link to="/register">Registre-se</Link></p>
