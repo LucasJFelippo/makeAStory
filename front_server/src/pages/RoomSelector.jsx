@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client'; // Voltamos a usar 'io'
+import axios from 'axios';
 import './RoomSelector.css';
 
 // Conecta ao namespace Raiz (Lobby)

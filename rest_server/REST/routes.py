@@ -22,6 +22,9 @@ def create_room():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
+    if user.is_guest:
+        return jsonify({"msg": "Convidados não podem criar salas"}), 403
+
     new_room = GameRoom(
         room_code=generate_room_code(),
         status='LOBBY'
@@ -34,6 +37,7 @@ def create_room():
     return jsonify({
         "msg": "Sala criada com sucesso",
         "room": {
+            "id": new_room.id,
             "room_code": new_room.room_code,
             "status": new_room.status,
             "created_at": new_room.created_at

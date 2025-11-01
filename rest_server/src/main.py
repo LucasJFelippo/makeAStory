@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
+
+from datetime import timedelta
 from flask_cors import CORS
 
 from src.lobby.lobby import LobbyNS
@@ -20,6 +22,7 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'chave-jwt')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game_data.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     
     db.init_app(app)
     bcrypt.init_app(app)
