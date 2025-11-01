@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 
 from src.lobby.lobby import LobbyNS
 from src.room.room import RoomNS
@@ -13,6 +14,7 @@ import os
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
     app.debug = True
     app.config['SECRET_KEY'] = os.getenv('MAKEASTORY_SOCKETIO_APP_KEY')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'chave-jwt')
@@ -28,7 +30,7 @@ def create_app():
     app.register_blueprint(api_blueprint) # Registra /api/rooms, /api/rooms/<id>/join, etc.
     
     socketio.on_namespace(LobbyNS('/'))
-    socketio.on_namespace(RoomNS('/r', socketio))
+    socketio.on_namespace(RoomNS('/r', socketio, app))
 
     socketio.init_app(app)
 

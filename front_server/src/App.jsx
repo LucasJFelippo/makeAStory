@@ -1,28 +1,23 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ChatRoom from './pages/ChatRoom';
 import RoomSelector from './pages/RoomSelector';
-
-// Não precisamos importar LoginPage ou RegisterPage por enquanto
+import LoginPage from './pages/LoginPage';     // <-- Importe
+import RegisterPage from './pages/RegisterPage'; // <-- Importe
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* A rota "/" (raiz) agora leva direto para o RoomSelector.
-          É o nosso "ponto de entrada" temporário.
-        */}
-        <Route path="/" element={<RoomSelector />} />
+        {/* Define a página de login como a rota principal */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
-        {/* Esta rota é redundante se "/" já é o seletor, 
-          mas é bom manter para consistência.
-        */}
+        {/* As rotas do jogo (proteja-as depois, se quiser) */}
         <Route path="/rooms" element={<RoomSelector />} />
-
-        {/* Esta é a rota dinâmica para a sala de chat.
-          O :roomId será pego pelo componente ChatRoom.
-        */}
         <Route path="/chat/:roomId" element={<ChatRoom />} />
 
+        {/* Rota inicial agora é o login */}
+        <Route path="/" element={<LoginPage />} />
       </Routes>
     </BrowserRouter>
   );
