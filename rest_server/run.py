@@ -2,6 +2,8 @@ from src.main import create_app
 from models import db, GameRoom 
 import logging
 import os
+from gevent import monkey
+monkey.patch_all()
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
