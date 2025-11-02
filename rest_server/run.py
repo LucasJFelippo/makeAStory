@@ -1,9 +1,9 @@
+import gevent.monkey
+gevent.monkey.patch_all()
 from src.main import create_app
-from models import db, GameRoom 
+from models import db, GameRoom
 import logging
 import os
-from gevent import monkey
-monkey.patch_all()
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -11,7 +11,6 @@ app, socketio = create_app()
 
 with app.app_context():
     db.create_all()
-
     if not app.debug:
         try:
             print("Limpando salas 'IN_PROGRESS' de sessões anteriores...")

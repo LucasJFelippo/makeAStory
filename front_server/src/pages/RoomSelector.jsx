@@ -4,8 +4,7 @@ import { io } from 'socket.io-client'; // Voltamos a usar 'io'
 import axios from 'axios';
 import './RoomSelector.css';
 
-// Conecta ao namespace Raiz (Lobby)
-const RENDER_URL = 'https://makeastory-backend.onrender.com';
+const RENDER_URL = 'https://makeastory-frontend.onrender.com';
 const LOBBY_URL = RENDER_URL;
 
 function RoomSelector() {

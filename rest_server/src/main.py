@@ -38,9 +38,9 @@ def create_app():
     frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173') 
     
     CORS(app, 
-         origins=[frontend_url],
-         methods=["GET", "POST", "OPTIONS"],
-         headers=["Content-Type", "Authorization"],
+         origins=[frontend_url], 
+         methods=["GET", "POST", "OPTIONS"], 
+         headers=["Content-Type", "Authorization"], 
          supports_credentials=True
     )
     

@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './AuthForm.css'; // Reutiliza o mesmo CSS
 
-const RENDER_URL = 'https://makeastory-backend.onrender.com';
+const RENDER_URL = 'https://makeastory-frontend.onrender.com';
 const REGISTER_URL = `${RENDER_URL}/auth/register`;
 
 function RegisterPage() {

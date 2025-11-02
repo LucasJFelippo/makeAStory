@@ -2,10 +2,10 @@ from flask_socketio import Namespace, emit
 from models import GameRoom, db
 
 class LobbyNS(Namespace):
+
     def __init__(self, app):
         super().__init__('/')
         self.app = app
-
 
     def _get_and_emit_rooms(self):
         rooms_info = []
@@ -19,7 +19,7 @@ class LobbyNS(Namespace):
                     'room_id': room.id,
                     'room_name': room.room_code,
                     'members': room.participants.count(),
-                    'status': room.status
+                    'status': room.status 
                 } for room in db_rooms]
         except Exception as e:
             print(f"Erro ao buscar salas do lobby: {e}")
