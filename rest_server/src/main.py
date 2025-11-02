@@ -51,8 +51,8 @@ def create_app():
     room_handler = RoomNS(socketio, app)
 
 
-    socketio.on_namespace(lobby_handler, '/')
-    socketio.on_namespace(room_handler, '/r')
+    socketio.on_namespace(lobby_handler)
+    socketio.on_namespace(room_handler)
 
 
     socketio.init_app(app)
