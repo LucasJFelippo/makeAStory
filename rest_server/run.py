@@ -1,5 +1,5 @@
 from src.main import create_app
-from models import db
+from models import db, GameRoom
 import logging
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -8,6 +8,18 @@ if __name__ == "__main__":
     app, socketio = create_app()
     with app.app_context():
         db.create_all()
+
+        try:
+                stuck_rooms = GameRoom.query.filter_by(status='IN_PROGRESS').all()
+                if stuck_rooms:
+                    for room in stuck_rooms:
+                        room.status = 'LOBBY'
+                        room.participants = []
+                    
+                    db.session.commit()
+        except Exception as e:
+                print(f"ERRO ao limpar salas presas: {e}")
+                db.session.rollback()
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=False,
                  use_reloader=True, 

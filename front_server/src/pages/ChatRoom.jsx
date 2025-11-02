@@ -7,12 +7,14 @@ import "./ChatRoom.css";
 const ROOM_URL = 'http://localhost:5000/r';
 
 function ChatRoom() {
-    const { roomId } = useParams(); // roomId agora é o ID numérico (ex: "0", "1")
+    const { roomId } = useParams();
     const [socket, setSocket] = useState(null);
     const [status, setStatus] = useState('Connecting...');
     const [messages, setMessages] = useState([]);
     const [myMessage, setMyMessage] = useState('');
     const [users, setUsers] = useState([]);
+    const [isAiThinking, setIsAiThinking] = useState(false);
+    const [isGameStarted, setIsGameStarted] = useState(false);
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
 
@@ -62,6 +64,9 @@ function ChatRoom() {
         // 5. MUDANÇA DE EVENTO: 'snippet_broadcast' -> 'round_ended'
         //
         newSocket.on('round_ended', (data) => {
+            // --- 2. ATIVE O INDICADOR AQUI ---
+            setIsAiThinking(true);
+
             if (data && data.snippets) {
                 const newMsgs = data.snippets.map(item => ({
                     type: 'snippet',
@@ -75,6 +80,9 @@ function ChatRoom() {
         // 6. MUDANÇA DE EVENTO: 'ai_response' -> 'new_story_part' (É AQUI QUE A MÚSICA CHEGA!)
         //
         newSocket.on('new_story_part', (data) => {
+            // --- 3. DESATIVE O INDICADOR AQUI ---
+            setIsAiThinking(false);
+
             const msg = {
                 type: 'ai_response',
                 story: data.text, // Back-end envia 'text'
@@ -96,10 +104,13 @@ function ChatRoom() {
 
         // 8. Ouve 'game_started' e 'round_started'
         newSocket.on('game_started', (data) => {
+            setIsGameStarted(true);
             const msg = { type: 'system', text: `🎮 Jogo iniciado por ${data.triggerer}` };
             setMessages((prev) => [...prev, msg]);
         });
         newSocket.on('round_started', (data) => {
+            setIsAiThinking(false);
+            setIsGameStarted(true);
             const msg = { type: 'system', text: `🕒 Rodada ${data.round} iniciada` };
             setMessages((prev) => [...prev, msg]);
         });
@@ -148,8 +159,8 @@ function ChatRoom() {
     const renderMessage = (msg, index) => {
         if (msg.type === 'ai_response') {
             return (
-                <div key={index} className="ai-message" style={{ background: 'rgba(255, 0, 255, 0.2)', border: '1px solid #ff00ff' }}>
-                    <p style={{ color: '#ffffff' }}>{msg.story}</p>
+                <div key={index} className="ai-message">
+                    <p>{msg.story}</p>
 
                     {msg.image_url &&
                         <img src={msg.image_url} alt="História gerada" style={{ maxWidth: '100%' }} />
@@ -157,9 +168,9 @@ function ChatRoom() {
 
                     {/* === AQUI ESTÁ A MÚSICA! === */}
                     {msg.song_url && (
-                        <div>
-                            <p style={{ margin: '10px 0 5px 0', fontWeight: 'bold' }}>Música da Rodada:</p>
-                            <audio controls src={msg.song_url} style={{ width: '100%' }}>
+                        <div className="audio-container"> {/* NOVO WRAPPER */}
+                            <p className="audio-title">Música da Rodada:</p> {/* CLASSE NOVA */}
+                            <audio controls src={msg.song_url} className="custom-audio-player"> {/* CLASSE NOVA */}
                                 Seu navegador não suporta a tag de áudio.
                             </audio>
                         </div>
@@ -208,8 +219,20 @@ function ChatRoom() {
                     {messages.map(renderMessage)}
                     <div ref={chatEndRef} />
                 </div>
+
+                {/* --- 5. ADICIONE O BLOCO JSX DO INDICADOR AQUI --- */}
+                {isAiThinking && (
+                    <div className="ai-thinking-indicator">
+                        <div className="spinner"></div>
+                        <span>IA está processando...</span>
+                    </div>
+                )}
+                {/* --- FIM DO BLOCO --- */}
+
                 <div className="chat-actions">
-                    <button onClick={handleStartGame}>Gerar História (IA)</button>
+                    <button onClick={handleStartGame} disabled={isGameStarted}>
+                       Gerar História (IA)
+                    </button>
                 </div>
                 <form onSubmit={handleSendMessage} className="message-input-form">
                     <input

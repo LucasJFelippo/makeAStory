@@ -414,7 +414,7 @@ class RoomNS(Namespace):
                             'role': 'system', 
                             'content': (
                                 "Sua tarefa é extrair o 'clima' ou 'sentimento' de um texto. "
-                                "Forneça de 5 a 7 tags em inglês que descrevam o GÊNERO (ex: medieval fantasy, sci-fi) "
+                                "Forneça de 3 a 5 tags em inglês que descrevam o GÊNERO (ex: medieval fantasy, sci-fi) "
                                 ",os instrumentos a serem utilizados na musica e a EMOÇÃO (ex: epic, battle, sad, mysterious, rainy), não os objetos. "
                                 "EVITE tags de objetos literais como 'dragon', 'bard' ou 'sword'. "
                                 "Responda apenas com as tags separadas por vírgula."

@@ -99,6 +99,8 @@ body {
     padding: 20px;
     scrollbar-width: thin;
     scrollbar-color: #ff00ff #1a1a1a;
+    display: flex;
+    flex-direction: column;
 }
 
 .message-list::-webkit-scrollbar {
@@ -130,7 +132,7 @@ body {
     color: #ffffff;
     border-radius: 12px;
     max-width: 70%;
-    align-self: flex-end;
+    align-self: flex-start;
     word-wrap: break-word;
     box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
 }
@@ -147,6 +149,22 @@ body {
     color: #ff00ff;
     text-align: center;
     text-shadow: 0 0 5px rgba(255, 0, 255, 0.7);
+}
+
+.ai-message {
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    background: rgba(255, 0, 255, 0.2);
+    border: 1px solid #ff00ff;
+    color: #ffffff;
+    border-radius: 12px;
+    word-wrap: break-word;
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+}
+
+.ai-message>p:first-child {
+    margin-top: 0;
+    white-space: pre-line;
 }
 
 /* --- Ações e Input --- */
@@ -270,4 +288,129 @@ body {
 .user-list::-webkit-scrollbar-thumb {
     background-color: #00ffcc;
     border-radius: 3px;
+}
+
+.ai-message .audio-container {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 0, 255, 0.5);
+    /* Linha magenta separadora */
+}
+
+.ai-message .audio-title {
+    margin: 0 0 8px 0;
+    font-weight: bold;
+    color: #ff00ff;
+    /* Cor magenta para o título */
+    text-shadow: 0 0 5px #ff00ff;
+}
+
+.custom-audio-player {
+    width: 100%;
+    height: 40px;
+    /* Define uma altura fixa */
+    background-color: #0a0a0a;
+    border-radius: 4px;
+    border: 1px solid #ff00ff;
+    /* Borda magenta principal */
+}
+
+/* --- Controles WebKit (Chrome/Edge/Safari) --- */
+
+/* Cor dos ícones (play, mudo) e do tempo */
+.custom-audio-player::-webkit-media-controls-panel {
+    background-color: #0a0a0a;
+    color: #00ffcc;
+    /* Cor ciano para ícones e texto */
+}
+
+/* Botão de Play/Pause */
+.custom-audio-player::-webkit-media-controls-play-button {
+    color: #00ffcc;
+}
+
+.custom-audio-player::-webkit-media-controls-play-button:hover {
+    color: #ffffff;
+    background-color: rgba(255, 0, 255, 0.5);
+    /* Fundo magenta no hover */
+    border-radius: 50%;
+}
+
+/* Texto do tempo (corrente e total) */
+.custom-audio-player::-webkit-media-controls-current-time-display,
+.custom-audio-player::-webkit-media-controls-time-remaining-display {
+    color: #00ffcc;
+    text-shadow: 0 0 3px #00ffcc;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 0.9em;
+}
+
+/* Barra de progresso (timeline) */
+.custom-audio-player::-webkit-media-controls-timeline {
+    border: 1px solid #00ffcc;
+    /* Borda ciano */
+    background-color: #1a1a1a;
+    border-radius: 4px;
+    margin: 0 10px;
+}
+
+/* Bolinha de arrastar (thumb) */
+.custom-audio-player::-webkit-media-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ff00ff;
+    /* Bolinha magenta */
+    box-shadow: 0 0 5px #ff00ff;
+}
+
+/* Controle de volume */
+.custom-audio-player::-webkit-media-controls-volume-slider {
+    border: 1px solid #00ffcc;
+    background-color: #1a1a1a;
+    border-radius: 4px;
+}
+
+.ai-thinking-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    background: rgba(17, 17, 17, 0.8);
+    backdrop-filter: blur(3px);
+    border-top: 1px solid #ff00ff;
+    color: #ff00ff;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ff00ff;
+    gap: 10px;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 255, 204, 0.3);
+    border-left-color: #00ffcc;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.chat-actions button:disabled {
+    border-color: #555;
+    color: #555;
+    background: rgba(17, 17, 17, 0.5);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.chat-actions button:disabled:hover {
+    background: rgba(17, 17, 17, 0.5);
+    color: #555;
+    box-shadow: none;
 }
