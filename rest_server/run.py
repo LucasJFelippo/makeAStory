@@ -1,3 +1,5 @@
+import gevent.monkey
+gevent.monkey.patch_all()
 from src.main import create_app
 from models import db, GameRoom
 import logging

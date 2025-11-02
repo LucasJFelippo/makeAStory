@@ -53,8 +53,6 @@ def create_app():
     socketio.on_namespace(room_handler)
 
     socketio.init_app(app, 
-                      cors_allowed_origins=frontend_url,
-                      async_mode='gevent',
-                      ping_timeout=10,
-                      ping_interval=30)
+                        cors_allowed_origins=frontend_url)
+    
     return app, socketio
