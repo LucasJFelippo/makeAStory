@@ -30,14 +30,13 @@ def create_app():
         
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     
     db.init_app(app)
     bcrypt.init_app(app)
     jwt = JWTManager(app)
 
-    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173') 
     
     CORS(app, resources={
         r"/auth/*": {"origins": frontend_url},
@@ -46,8 +45,8 @@ def create_app():
     
     socketio = SocketIO(cors_allowed_origins=frontend_url)
 
-    app.register_blueprint(auth_bp)       # Registra /auth/register, /auth/login, etc.
-    app.register_blueprint(api_blueprint) # Registra /api/rooms, /api/rooms/<id>/join, etc.
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(api_blueprint)
     
     socketio.on_namespace(LobbyNS('/', app))
     socketio.on_namespace(RoomNS('/r', socketio, app))
