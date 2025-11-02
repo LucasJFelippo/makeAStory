@@ -5,7 +5,7 @@ import axios from 'axios';
 import './RoomSelector.css';
 
 // Conecta ao namespace Raiz (Lobby)
-const RENDER_URL = 'https://seu-backend.onrender.com';
+const RENDER_URL = 'https://makeastory-backend.onrender.com';
 const LOBBY_URL = RENDER_URL;
 
 function RoomSelector() {

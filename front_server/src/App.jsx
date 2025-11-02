@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ChatRoom from './pages/ChatRoom';
 import RoomSelector from './pages/RoomSelector';
-import LoginPage from './pages/LoginPage';     // <-- Importe
-import RegisterPage from './pages/RegisterPage'; // <-- Importe
+import LoginPage from './pages/LoginPage'; 
+import RegisterPage from './pages/RegisterPage';
 
 function App() {
   return (

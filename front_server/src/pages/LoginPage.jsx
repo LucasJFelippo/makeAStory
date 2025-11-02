@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './AuthForm.css';
 
-const RENDER_URL = 'https://seu-backend.onrender.com';
+const RENDER_URL = 'https://makeastory-backend.onrender.com';
 const LOGIN_URL = `${RENDER_URL}/auth/login`;
 const GUEST_LOGIN_URL = `${RENDER_URL}/auth/guest_login`;
 
