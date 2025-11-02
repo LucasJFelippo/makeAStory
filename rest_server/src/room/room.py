@@ -198,10 +198,16 @@ class RoomNS(Namespace):
             if room['room_state'] == RoomState.SNIPPETING and member_data and not member_data.get('submitted'):
                 
                 logger.info(f"[ROOM {room_id}] User {username} desconectou sem enviar snippet. Atualizando contagem.")
-                room['pending'] -= 1
-                if room['pending'] == 0:
-                    logger.info(f"[ROOM {room_id}] Desconexão de {username} finalizou a rodada.")
+                room['pending'] -= 1 
+                is_last_player = (len(room['room_members']) == 1)
+
+                if room['pending'] == 0 and not is_last_player:
+                    logger.info(f"[ROOM {room_id}] Desconexão de {username} finalizou a rodada (ainda há jogadores).")
                     self.socketio.start_background_task(self.end_round, room_id, 'player_disconnect_finishes_round')
+                
+                elif is_last_player:
+                     logger.info(f"[ROOM {room_id}] Desconexão de {username} (último jogador). A rodada não será processada.")
+                
                 else:
                     logger.info(f"[ROOM {room_id}] Contagem de snippets pendentes agora é: {room['pending']}")
 
@@ -226,6 +232,7 @@ class RoomNS(Namespace):
                         db.session.commit()
                         logger.info(f"[ROOM {room_id}] Sala {room_id} marcada como LOBBY no DB.")
                         # db_operations_done já será True por causa da remoção acima
+
 
             except Exception as e:
                 logger.error(f"Erro ao remover participante/atualizar sala no DB: {e}")
