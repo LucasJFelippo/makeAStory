@@ -43,6 +43,7 @@ function ChatRoom() {
                 if (ack && ack.status === 'ok') {
                     setStatus(`✔ Conectado à sala ${ack.room_id}`);
                     setUsers(ack.users_list || []);
+                    setIsAiThinking(false);
                 } else {
                     setStatus(ack ? `❌ ${ack.msg}` : 'Falha ao entrar (sem ack)');
                 }

@@ -54,5 +54,7 @@ def create_app():
 
     socketio.init_app(app, 
                       cors_allowed_origins=frontend_url,
-                      async_mode='gevent')
+                      async_mode='gevent',
+                      ping_timeout=10,
+                      ping_interval=30)
     return app, socketio
