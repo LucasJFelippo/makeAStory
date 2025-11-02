@@ -23,6 +23,31 @@ class RoomNS(Namespace):
         self.socketio = socketio
         self.app = app
 
+    def _get_user_list(self, room_id):
+        if room_id in ROOMS:
+            members = ROOMS[room_id]['room_members']
+            return [member_data.get('username', member_id) for member_id, member_data in members.items()]
+        return []
+
+    def _broadcast_user_list(self, room_id):
+        user_list = self._get_user_list(room_id)
+        logger.info(f"[ROOM {room_id}] Transmitindo lista de usuários: {user_list}")
+        self.socketio.emit('user_list_update', {'users_list': user_list}, to=room_id, namespace='/r')
+
+    def _broadcast_lobby_update(self):
+        try:
+            with self.app.app_context():
+                db_rooms = GameRoom.query.filter_by(status='LOBBY').all()
+                rooms_info = [{
+                    'room_id': room.id,
+                    'room_name': room.room_code,
+                    'members': room.participants.count()
+                } for room in db_rooms]
+                
+                self.socketio.emit('rooms_info', {'rooms': rooms_info}, namespace='/')
+        except Exception as e:
+            logger.error(f"Erro ao transmitir atualização do lobby: {e}")
+
     def _get_auth_info(self):
         user_id = session.get('user_id')
         username = session.get('username', 'Convidado')
@@ -84,84 +109,83 @@ class RoomNS(Namespace):
             logger.warning(f"room_id inválido recebido: {room_id_from_client}")
             return {'status': 'error', 'msg': 'room_id deve ser um número'}
         
-        game_room_db = GameRoom.query.get(room_id)
+        # --- CORREÇÃO: Adiciona contexto da aplicação ---
+        with self.app.app_context():
+            try:
+                game_room_db = GameRoom.query.get(room_id)
+                user = User.query.get(user_id) # Pega o objeto do usuário
 
-        if not game_room_db:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) pediu para entrar na sala {room_id} (inexistente no DB)')
-            return {'status': 'error', 'msg': "A sala não existe.", 'room_id': room_id}
-        
-        if room_id not in ROOMS:
-            logger.info(f"[ROOM {room_id}] Sala '{game_room_db.room_code}' está inativa. Ativando e hidratando cache...")
-            ROOMS[room_id] = {
-                'room_id': game_room_db.id,
-                'room_name': game_room_db.room_code,
-                'room_state': RoomState.WAITING,
-                'room_members': {},
-                'pending': 0,
-                'timer': None,
-                'history': [],
-                'history_parsed': [{
-                    'role': 'developer',
-                    'content': GPT_ENTRY_PROMPT
-                }],
-                'current_round': 0
-            }
-        
-        if len(ROOMS[room_id]['room_members']) >= MAX_ROOM_SIZE:
-            logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia no cache)')
-            return {'status': 'error', 'msg': 'A sala está cheia', 'room_id': room_id}
-        
-        # O usuário já está na sala?
-        if user_id in ROOMS[room_id]['room_members']:
-             logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) já está na sala.")
-        else:
-            logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou')
+                if not game_room_db:
+                    logger.warning(f'[ROOM] User {username} (ID: {user_id}) pediu para entrar na sala {room_id} (inexistente no DB)')
+                    return {'status': 'error', 'msg': "A sala não existe.", 'room_id': room_id}
+                
+                if not user:
+                    logger.error(f"[ROOM] User ID {user_id} da sessão não encontrado no DB.")
+                    return {'status': 'error', 'msg': 'Usuário não autenticado no DB.'}
 
-        # Adiciona o usuário (pelo ID do DB) à sala (em memória)
-        ROOMS[room_id]['room_members'][user_id] = {
-            'user_id': user_id,
-            'username': username, # Armazena o username
-            'submitted': False,
-            'snippet': ''
-        }
-        USER_ROOM_MAP[user_id] = room_id
-        
-        # Cliente entra no canal da sala para broadcasts
-        join_room(room_id)
-        
-        # Avisa os outros que o usuário entrou
-        emit('status_update', {'msg': f'{username} entrou na sala.'}, to=room_id, namespace='/r', include_self=False)
+                # Se a sala não está no cache, hidrata ela
+                if room_id not in ROOMS:
+                    logger.info(f"[ROOM {room_id}] Sala '{game_room_db.room_code}' está inativa. Ativando e hidratando cache...")
+                    ROOMS[room_id] = {
+                        'room_id': game_room_db.id,
+                        'room_name': game_room_db.room_code,
+                        'room_state': RoomState.WAITING,
+                        'room_members': {},
+                        'pending': 0,
+                        'timer': None,
+                        'history': [],
+                        'history_parsed': [{
+                            'role': 'developer',
+                            'content': GPT_ENTRY_PROMPT
+                        }],
+                        'current_round': 0
+                    }
+                
+                # Verifica se a sala (em cache) está cheia
+                if len(ROOMS[room_id]['room_members']) >= MAX_ROOM_SIZE:
+                    logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia no cache)')
+                    return {'status': 'error', 'msg': 'A sala está cheia', 'room_id': room_id}
+                
+                # --- CORREÇÃO (Bug 2A): Adiciona usuário ao DB ---
+                if user not in game_room_db.participants:
+                    game_room_db.participants.append(user)
+                    db.session.commit()
+                    logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) adicionado aos participantes do DB.")
+                    self._broadcast_lobby_update()
+                    
+                    # --- CORREÇÃO (Bug 2B): Notifica o lobby ---
+                    self._broadcast_lobby_update()
+                
+                # O usuário já está na sala (cache)?
+                if user_id in ROOMS[room_id]['room_members']:
+                     logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) já está na sala (cache).")
+                else:
+                    logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou (cache)')
 
-        return {'status': 'ok', 'room_id': room_id}
+                # Adiciona o usuário (pelo ID do DB) à sala (em memória/cache)
+                ROOMS[room_id]['room_members'][user_id] = {
+                    'user_id': user_id,
+                    'username': username, # Armazena o username
+                    'submitted': False,
+                    'snippet': ''
+                }
+                USER_ROOM_MAP[user_id] = room_id
+                
+                # Cliente entra no canal da sala para broadcasts
+                join_room(room_id)
+                
+                # Avisa os outros que o usuário entrou
+                emit('status_update', {'msg': f'{username} entrou na sala.'}, to=room_id, namespace='/r', include_self=False)
+                self._broadcast_user_list(room_id)
 
-    """     def on_join_room(self, data): # MODIFICAR/ADICIONAR AUTENTICAÇÃO DO USER
-            user_id = request.sid
-            room_id = data.get('room_id')
+                current_users = self._get_user_list(room_id)
+                return {'status': 'ok', 'room_id': room_id, 'users_list': current_users}
 
-            if not room_id in ROOMS:
-                logger.warning(f'[ROOM] User {request.sid} asked to join a non existing room')
-                return {'status': 'error', 'msg': "room didn't exist, what are you trying to do?", 'room_id': room_id}
-            
-            if len(ROOMS[room_id]['room_members']) >= MAX_ROOM_SIZE:
-                return {'status': 'error', 'msg': 'room is full' , 'room_id': room_id}
+            except Exception as e:
+                logger.error(f"Erro no on_join_room: {e}")
+                db.session.rollback()
+                return {'status': 'error', 'msg': 'Erro interno ao entrar na sala.'}
 
-            logger.info(f'[ROOM {room_id}] User {request.sid} asked to join')
-
-            # room_members schema {
-            #     'user_id': str,       > socket id
-            #     'submitted': bool,    > if user have submitted the snippet in current round
-            #     'snippet': str        > snippet of current round
-            # }
-
-            ROOMS[room_id]['room_members'][user_id] = {
-                'user_id': user_id,
-                'submitted': False,
-                'snippet': ''
-            }
-            USER_ROOM_MAP[user_id] = room_id
-
-            return {'status': 'ok', 'room_id': room_id} """
-    
     def on_disconnect(self):
         user_id, username = self._get_auth_info()
 
@@ -175,44 +199,72 @@ class RoomNS(Namespace):
         # Remove o cliente do canal de broadcast
         leave_room(room_id)
 
+        db_operations_done = False
+
+        # --- CORREÇÃO: Adiciona o contexto da aplicação para TODAS as ops de DB ---
+        with self.app.app_context():
+            user = User.query.get(user_id)
+            game_room_db = GameRoom.query.get(room_id)
+
+            try:
+                # --- CORREÇÃO (Bug 2A): Remove o usuário da lista de participantes do DB ---
+                if user and game_room_db and user in game_room_db.participants:
+                    game_room_db.participants.remove(user)
+                    db.session.commit()
+                    logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) removido dos participantes do DB.")
+                    db_operations_done = True
+                
+                # Se a sala ficar vazia (baseado no cache), atualiza o status no DB
+                if room and len(room['room_members']) == 1: # Está prestes a ficar com 0
+                    if game_room_db:
+                        game_room_db.status = 'LOBBY'
+                        # game_room_db.final_story_text = "" # Descomente se quiser limpar a história
+                        db.session.commit()
+                        logger.info(f"[ROOM {room_id}] Sala {room_id} marcada como LOBBY no DB.")
+                        # db_operations_done já será True por causa da remoção acima
+
+            except Exception as e:
+                logger.error(f"Erro ao remover participante/atualizar sala no DB: {e}")
+                db.session.rollback()
+
+            # --- CORREÇÃO (Bug 1): Deleta o usuário convidado ---
+            try:
+                if user and user.is_guest:
+                    logger.info(f"Convidado {username} (ID: {user_id}) desconectou. Removendo do banco de dados.")
+                    db.session.delete(user)
+                    db.session.commit()
+                    logger.info(f"Convidado {username} (ID: {user_id}) removido com sucesso.")
+
+            except Exception as e:
+                logger.error(f"Erro ao tentar remover convidado {user_id}: {e}")
+                db.session.rollback()
+        # --- Fim do bloco app_context ---
+
+        # Remove o usuário do mapa global em memória
+        if user_id in USER_ROOM_MAP:
+            USER_ROOM_MAP.pop(user_id)
+
+        # Remove o usuário da sala em memória (cache)
         if room:
-            # Remove o usuário da lista de membros da sala
             if user_id in room['room_members']:
                 room['room_members'].pop(user_id)
             
             # Avisa os outros que o usuário saiu
             emit('status_update', {'msg': f'{username} saiu.'}, to=room_id, namespace='/r')
-            logger.info(f"User {username} (ID: {user_id}) removido da sala {room_id}")
+            logger.info(f"User {username} (ID: {user_id}) removido da sala {room_id} (cache)")
+
+            self._broadcast_user_list(room_id)
 
             if len(room['room_members']) == 0:
                 logger.info(f"[ROOM {room_id}] A sala está vazia. Removendo do cache de memória.")
                 ROOMS.pop(room_id, None)
-                
-                try:
-                    game_room_db = GameRoom.query.get(room_id)
-                    if game_room_db:
-                        game_room_db.status = 'LOBBY'
-                        # game_room_db.final_story_text = ""
-                        db.session.commit()
-                except Exception as e:
-                    logger.error(f"Erro ao resetar status da sala {room_id} no DB: {e}")
-                    db.session.rollback()
 
-        # Remove o usuário do mapa global
-        if user_id in USER_ROOM_MAP:
-            USER_ROOM_MAP.pop(user_id)
-        
-        try:
-            user = User.query.get(user_id)
-            if user and user.is_guest:
-                logger.info(f"Convidado {username} (ID: {user_id}) desconectou. Removendo do banco de dados.")
-                db.session.delete(user)
-                db.session.commit()
-                logger.info(f"Convidado {username} (ID: {user_id}) removido com sucesso.")
-
-        except Exception as e:
-            logger.error(f"Erro ao tentar remover convidado {user_id}: {e}")
-            db.session.rollback()
+        # --- CORREÇÃO (Bug 2B): Notifica o lobby se o DB foi alterado ---
+        if db_operations_done:
+            self._broadcast_lobby_update()
+            lobby_ns = self.socketio.namespace_handlers.get('/')
+            if lobby_ns:
+                lobby_ns._get_and_emit_rooms()
         
 
     def on_start_game(self):

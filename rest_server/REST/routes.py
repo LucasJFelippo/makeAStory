@@ -6,7 +6,7 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 
-from models import db, User, GameRoom
+from models import db, User, GameRoom, socketio
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -34,6 +34,19 @@ def create_room():
     db.session.add(new_room)
     db.session.commit()
 
+    try:
+        db_rooms = GameRoom.query.filter_by(status='LOBBY').all()
+        rooms_info = [{
+            'room_id': room.id,
+            'room_name': room.room_code,
+            'members': room.participants.count()
+        } for room in db_rooms]
+        
+        socketio.emit('rooms_info', {'rooms': rooms_info}, namespace='/')
+        
+    except Exception as e:
+        print(f"Erro ao emitir atualização do lobby em create_room: {e}")
+        
     return jsonify({
         "msg": "Sala criada com sucesso",
         "room": {

@@ -12,6 +12,7 @@ function ChatRoom() {
     const [status, setStatus] = useState('Connecting...');
     const [messages, setMessages] = useState([]);
     const [myMessage, setMyMessage] = useState('');
+    const [users, setUsers] = useState([]);
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
 
@@ -39,6 +40,7 @@ function ChatRoom() {
             newSocket.emit('join_room', { room_id: parseInt(roomId) }, (ack) => {
                 if (ack && ack.status === 'ok') {
                     setStatus(`✔ Conectado à sala ${ack.room_id}`);
+                    setUsers(ack.users_list || []);
                 } else {
                     setStatus(ack ? `❌ ${ack.msg}` : 'Falha ao entrar (sem ack)');
                 }
@@ -82,6 +84,9 @@ function ChatRoom() {
             setMessages((prev) => [...prev, msg]);
         });
 
+        newSocket.on('user_list_update', (data) => {
+            setUsers(data.users_list || []);
+        });
         // 7. NOVO EVENTO: 'snippet_received'
         //
         newSocket.on('snippet_received', (data) => {
@@ -182,6 +187,16 @@ function ChatRoom() {
                 <div className="current-room-info">
                     Sala Atual:
                     <p>{roomId}</p>
+                </div>
+                <div className="user-list-container">
+                    <h3>Usuários Conectados</h3>
+                    <ul className="user-list">
+                        {users.map((user, index) => (
+                            <li key={index} className="user-list-item">
+                                {user}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
             <div className="chat-main">

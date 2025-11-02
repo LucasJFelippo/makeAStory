@@ -1,5 +1,4 @@
 from flask import Flask
-from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
 
 from datetime import timedelta
@@ -9,10 +8,9 @@ from src.lobby.lobby import LobbyNS
 from src.room.room import RoomNS
 from src.auth import auth_bp
 from REST.routes import api as api_blueprint
-from models import db, bcrypt
+from models import db, bcrypt, socketio
 
 import os
-
 
 def create_app():
     app = Flask(__name__)
@@ -27,12 +25,11 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     jwt = JWTManager(app)
-    socketio = SocketIO(cors_allowed_origins='*')
 
     app.register_blueprint(auth_bp)       # Registra /auth/register, /auth/login, etc.
     app.register_blueprint(api_blueprint) # Registra /api/rooms, /api/rooms/<id>/join, etc.
     
-    socketio.on_namespace(LobbyNS('/'))
+    socketio.on_namespace(LobbyNS('/', app))
     socketio.on_namespace(RoomNS('/r', socketio, app))
 
     socketio.init_app(app)

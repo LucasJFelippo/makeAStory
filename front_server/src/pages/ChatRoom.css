@@ -219,3 +219,62 @@ body {
 .message-input-form button:hover {
     box-shadow: 0 0 15px #00ffcc;
 }
+
+.user-list-container {
+    margin-top: 25px;
+    border-top: 1px solid #00ffcc;
+    /* Linha ciano */
+    padding-top: 15px;
+}
+
+.user-list-container h3 {
+    color: #00ffcc;
+    /* Ciano, para diferenciar do título da sala */
+    font-size: 1.1em;
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-shadow: 0 0 5px #00ffcc;
+}
+
+.user-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    /* Adiciona rolagem se a lista for muito grande */
+    overflow-y: auto;
+}
+
+.user-list-item {
+    color: #e0e0e0;
+    padding: 5px 0;
+    font-size: 0.95em;
+    /* Adiciona um "bullet" cyberpunk */
+    padding-left: 15px;
+    position: relative;
+}
+
+.user-list-item::before {
+    content: '»';
+    /* Você pode usar '■' ou '»' */
+    color: #ff00ff;
+    /* Magenta */
+    position: absolute;
+    left: 0;
+    top: 5px;
+}
+
+/* Scrollbar para a lista de usuários */
+.user-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.user-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.user-list::-webkit-scrollbar-thumb {
+    background-color: #00ffcc;
+    /* Ciano */
+    border-radius: 3px;
+}
