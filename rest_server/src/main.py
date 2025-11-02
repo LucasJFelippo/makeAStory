@@ -37,10 +37,12 @@ def create_app():
 
     frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173') 
     
-    CORS(app, resources={
-        r"/auth/*": {"origins": frontend_url},
-        r"/api/*": {"origins": frontend_url}
-    })
+    CORS(app, 
+         origins=[frontend_url],
+         methods=["GET", "POST", "OPTIONS"],
+         headers=["Content-Type", "Authorization"],
+         supports_credentials=True
+    )
     
     socketio = SocketIO(cors_allowed_origins=frontend_url)
 
@@ -50,10 +52,8 @@ def create_app():
     lobby_handler = LobbyNS(app)
     room_handler = RoomNS(socketio, app)
 
-
     socketio.on_namespace(lobby_handler)
     socketio.on_namespace(room_handler)
-
 
     socketio.init_app(app)
 

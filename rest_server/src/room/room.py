@@ -47,7 +47,6 @@ class RoomNS(Namespace):
             if not user:
                  raise ConnectionRefusedError('unauthorized - user not found')
 
-            # SALVA O ID E USERNAME NA SESSÃO DO SOCKET
             session['user_id'] = user.id
             session['username'] = user.username
             logger.info(f'[ROOM] Conexão autenticada para {user.username} (ID: {user.id}) (sid: {request.sid})')
