@@ -2,8 +2,8 @@ from flask_socketio import Namespace, emit
 from models import GameRoom, db
 
 class LobbyNS(Namespace):
-    def __init__(self, namespace, app):
-        super().__init__(namespace)
+    def __init__(self, app):
+        super().__init__('/')
         self.app = app
 
 

@@ -12,12 +12,11 @@ from models import db, bcrypt
 
 import os
 
-
 def create_app():
     app = Flask(__name__)
 
     is_production = os.environ.get('NODE_ENV') == 'production'
-    app.debug = not is_production
+    app.debug = not is_production 
 
     app.config['SECRET_KEY'] = os.getenv('MAKEASTORY_SOCKETIO_APP_KEY')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'chave-jwt')
@@ -48,8 +47,13 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_blueprint)
     
-    socketio.on_namespace(LobbyNS('/', app))
-    socketio.on_namespace(RoomNS('/r', socketio, app))
+    lobby_handler = LobbyNS(app)
+    room_handler = RoomNS(socketio, app)
+
+
+    socketio.on_namespace(lobby_handler, '/')
+    socketio.on_namespace(room_handler, '/r')
+
 
     socketio.init_app(app)
 

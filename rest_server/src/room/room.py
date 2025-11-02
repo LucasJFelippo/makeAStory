@@ -18,8 +18,8 @@ from src.log import logger
 
 
 class RoomNS(Namespace):
-    def __init__(self, namespace, socketio):
-        super().__init__(namespace)
+    def __init__(self, socketio, app):
+        super().__init__('/r')
         self.socketio = socketio
         self.app = app
 
