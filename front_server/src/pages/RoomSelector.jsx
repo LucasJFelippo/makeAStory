@@ -56,9 +56,14 @@ function RoomSelector() {
             navigate(`/chat/${newRoomId}`);
 
         } catch (err) {
-            // ... (seu código de tratamento de erro)
             console.error("Erro ao criar sala:", err);
-            setError('Erro ao tentar criar a sala.');
+
+            if (err.response && err.response.data && err.response.data.msg) {
+                // Usa a mensagem de erro específica do backend
+                setError(err.response.data.msg);
+            } else {
+                setError('Erro ao tentar criar a sala.');
+            }
         }
     };
 
@@ -79,9 +84,22 @@ function RoomSelector() {
 
                     {rooms.map(sala => (
                         <li key={sala.room_id} className="room-list-item">
-                            <Link to={`/chat/${sala.room_id}`}>
+                            <Link
+                                to={`/chat/${sala.room_id}`}
+                                className={sala.status === 'IN_PROGRESS' ? 'in-progress' : ''}
+                                onClick={(e) => {
+                                    if (sala.status === 'IN_PROGRESS') {
+                                        e.preventDefault();
+                                        setError(`A sala '${sala.room_name}' já está em jogo.`);
+                                    } else {
+                                        setError('');
+                                    }
+                                }}
+                            >
                                 {sala.room_name}
-                                <span style={{ float: 'right' }}>({sala.members} / {5})</span>
+                                <span style={{ float: 'right' }}>
+                                    {sala.status === 'IN_PROGRESS' ? 'Em Jogo' : `(${sala.members} / 5)`}
+                                </span>
                             </Link>
                         </li>
                     ))}

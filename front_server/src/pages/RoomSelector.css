@@ -99,3 +99,27 @@
 .auth-link-box a:hover {
     text-shadow: 0 0 8px #00ffcc;
 }
+
+.room-list-item a:hover {
+    background: rgba(0, 255, 204, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+}
+
+.room-list-item a.in-progress {
+    border-color: #ffaa00;
+    background: rgba(255, 170, 0, 0.1);
+    color: #ffaa00;
+    cursor: not-allowed;
+}
+
+.room-list-item a.in-progress:hover {
+    background: rgba(255, 170, 0, 0.3);
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+    color: #ffaa00;
+}
+
+
+.auth-link-box {
+    text-align: center;
+    margin-top: 1rem;
+}

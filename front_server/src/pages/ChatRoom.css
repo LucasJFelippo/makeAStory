@@ -223,13 +223,11 @@ body {
 .user-list-container {
     margin-top: 25px;
     border-top: 1px solid #00ffcc;
-    /* Linha ciano */
     padding-top: 15px;
 }
 
 .user-list-container h3 {
     color: #00ffcc;
-    /* Ciano, para diferenciar do título da sala */
     font-size: 1.1em;
     margin-top: 0;
     margin-bottom: 10px;
@@ -241,7 +239,6 @@ body {
     padding: 0;
     margin: 0;
     max-height: 200px;
-    /* Adiciona rolagem se a lista for muito grande */
     overflow-y: auto;
 }
 
@@ -249,16 +246,13 @@ body {
     color: #e0e0e0;
     padding: 5px 0;
     font-size: 0.95em;
-    /* Adiciona um "bullet" cyberpunk */
     padding-left: 15px;
     position: relative;
 }
 
 .user-list-item::before {
     content: '»';
-    /* Você pode usar '■' ou '»' */
     color: #ff00ff;
-    /* Magenta */
     position: absolute;
     left: 0;
     top: 5px;
@@ -275,6 +269,5 @@ body {
 
 .user-list::-webkit-scrollbar-thumb {
     background-color: #00ffcc;
-    /* Ciano */
     border-radius: 3px;
 }

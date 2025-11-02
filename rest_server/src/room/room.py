@@ -109,21 +109,23 @@ class RoomNS(Namespace):
             logger.warning(f"room_id inválido recebido: {room_id_from_client}")
             return {'status': 'error', 'msg': 'room_id deve ser um número'}
         
-        # --- CORREÇÃO: Adiciona contexto da aplicação ---
         with self.app.app_context():
             try:
                 game_room_db = GameRoom.query.get(room_id)
-                user = User.query.get(user_id) # Pega o objeto do usuário
+                user = User.query.get(user_id)
 
                 if not game_room_db:
                     logger.warning(f'[ROOM] User {username} (ID: {user_id}) pediu para entrar na sala {room_id} (inexistente no DB)')
                     return {'status': 'error', 'msg': "A sala não existe.", 'room_id': room_id}
                 
+                if game_room_db.status == 'IN_PROGRESS':
+                    logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (em jogo)')
+                    return {'status': 'error', 'msg': 'Esta sala já está em jogo.', 'room_id': room_id}
+
                 if not user:
                     logger.error(f"[ROOM] User ID {user_id} da sessão não encontrado no DB.")
                     return {'status': 'error', 'msg': 'Usuário não autenticado no DB.'}
 
-                # Se a sala não está no cache, hidrata ela
                 if room_id not in ROOMS:
                     logger.info(f"[ROOM {room_id}] Sala '{game_room_db.room_code}' está inativa. Ativando e hidratando cache...")
                     ROOMS[room_id] = {
@@ -141,40 +143,32 @@ class RoomNS(Namespace):
                         'current_round': 0
                     }
                 
-                # Verifica se a sala (em cache) está cheia
                 if len(ROOMS[room_id]['room_members']) >= MAX_ROOM_SIZE:
                     logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia no cache)')
                     return {'status': 'error', 'msg': 'A sala está cheia', 'room_id': room_id}
                 
-                # --- CORREÇÃO (Bug 2A): Adiciona usuário ao DB ---
+
                 if user not in game_room_db.participants:
                     game_room_db.participants.append(user)
                     db.session.commit()
                     logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) adicionado aos participantes do DB.")
                     self._broadcast_lobby_update()
                     
-                    # --- CORREÇÃO (Bug 2B): Notifica o lobby ---
-                    self._broadcast_lobby_update()
                 
-                # O usuário já está na sala (cache)?
                 if user_id in ROOMS[room_id]['room_members']:
                      logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) já está na sala (cache).")
                 else:
                     logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou (cache)')
 
-                # Adiciona o usuário (pelo ID do DB) à sala (em memória/cache)
                 ROOMS[room_id]['room_members'][user_id] = {
                     'user_id': user_id,
-                    'username': username, # Armazena o username
+                    'username': username,
                     'submitted': False,
                     'snippet': ''
                 }
                 USER_ROOM_MAP[user_id] = room_id
                 
-                # Cliente entra no canal da sala para broadcasts
                 join_room(room_id)
-                
-                # Avisa os outros que o usuário entrou
                 emit('status_update', {'msg': f'{username} entrou na sala.'}, to=room_id, namespace='/r', include_self=False)
                 self._broadcast_user_list(room_id)
 
@@ -201,7 +195,6 @@ class RoomNS(Namespace):
 
         db_operations_done = False
 
-        # --- CORREÇÃO: Adiciona o contexto da aplicação para TODAS as ops de DB ---
         with self.app.app_context():
             user = User.query.get(user_id)
             game_room_db = GameRoom.query.get(room_id)
@@ -227,19 +220,6 @@ class RoomNS(Namespace):
                 logger.error(f"Erro ao remover participante/atualizar sala no DB: {e}")
                 db.session.rollback()
 
-            # --- CORREÇÃO (Bug 1): Deleta o usuário convidado ---
-            try:
-                if user and user.is_guest:
-                    logger.info(f"Convidado {username} (ID: {user_id}) desconectou. Removendo do banco de dados.")
-                    db.session.delete(user)
-                    db.session.commit()
-                    logger.info(f"Convidado {username} (ID: {user_id}) removido com sucesso.")
-
-            except Exception as e:
-                logger.error(f"Erro ao tentar remover convidado {user_id}: {e}")
-                db.session.rollback()
-        # --- Fim do bloco app_context ---
-
         # Remove o usuário do mapa global em memória
         if user_id in USER_ROOM_MAP:
             USER_ROOM_MAP.pop(user_id)
@@ -259,12 +239,8 @@ class RoomNS(Namespace):
                 logger.info(f"[ROOM {room_id}] A sala está vazia. Removendo do cache de memória.")
                 ROOMS.pop(room_id, None)
 
-        # --- CORREÇÃO (Bug 2B): Notifica o lobby se o DB foi alterado ---
         if db_operations_done:
             self._broadcast_lobby_update()
-            lobby_ns = self.socketio.namespace_handlers.get('/')
-            if lobby_ns:
-                lobby_ns._get_and_emit_rooms()
         
 
     def on_start_game(self):
