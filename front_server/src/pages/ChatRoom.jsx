@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import "./ChatRoom.css";
 
-const RENDER_URL = 'https://makeastory-frontend.onrender.com';
+const RENDER_URL = 'https://makeastory-backend.onrender.com';
 const ROOM_URL = `${RENDER_URL}/r`;
 
 function ChatRoom() {
