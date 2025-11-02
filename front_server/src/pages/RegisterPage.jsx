@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './AuthForm.css'; // Reutiliza o mesmo CSS
 
-const REGISTER_URL = 'http://localhost:5000/auth/register';
+const RENDER_URL = 'https://makeastory-backend.onrender.com';
+const REGISTER_URL = `${RENDER_URL}/auth/register`;
 
 function RegisterPage() {
     const [username, setUsername] = useState('');
