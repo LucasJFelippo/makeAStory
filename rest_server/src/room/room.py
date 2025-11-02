@@ -193,6 +193,18 @@ class RoomNS(Namespace):
         # Remove o cliente do canal de broadcast
         leave_room(room_id)
 
+        if room:
+            member_data = room.get('room_members', {}).get(user_id)
+            if room['room_state'] == RoomState.SNIPPETING and member_data and not member_data.get('submitted'):
+                
+                logger.info(f"[ROOM {room_id}] User {username} desconectou sem enviar snippet. Atualizando contagem.")
+                room['pending'] -= 1
+                if room['pending'] == 0:
+                    logger.info(f"[ROOM {room_id}] Desconexão de {username} finalizou a rodada.")
+                    self.socketio.start_background_task(self.end_round, room_id, 'player_disconnect_finishes_round')
+                else:
+                    logger.info(f"[ROOM {room_id}] Contagem de snippets pendentes agora é: {room['pending']}")
+
         db_operations_done = False
 
         with self.app.app_context():
@@ -200,14 +212,13 @@ class RoomNS(Namespace):
             game_room_db = GameRoom.query.get(room_id)
 
             try:
-                # --- CORREÇÃO (Bug 2A): Remove o usuário da lista de participantes do DB ---
                 if user and game_room_db and user in game_room_db.participants:
                     game_room_db.participants.remove(user)
                     db.session.commit()
                     logger.info(f"[ROOM {room_id}] User {username} (ID: {user_id}) removido dos participantes do DB.")
                     db_operations_done = True
                 
-                # Se a sala ficar vazia (baseado no cache), atualiza o status no DB
+                # Se a sala ficar vazia, atualiza o status no DB
                 if room and len(room['room_members']) == 1: # Está prestes a ficar com 0
                     if game_room_db:
                         game_room_db.status = 'LOBBY'
