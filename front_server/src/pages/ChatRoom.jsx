@@ -3,8 +3,8 @@ import { io } from 'socket.io-client';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import "./ChatRoom.css";
 
-// A URL do namespace '/r'
-const ROOM_URL = 'http://localhost:5000/r';
+const RENDER_URL = 'https://seu-backend.onrender.com';
+const ROOM_URL = `${RENDER_URL}/r`;
 
 function ChatRoom() {
     const { roomId } = useParams();

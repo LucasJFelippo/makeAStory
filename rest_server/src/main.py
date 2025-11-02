@@ -1,30 +1,50 @@
 from flask import Flask
+from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager
-
-from datetime import timedelta
 from flask_cors import CORS
+from datetime import timedelta
 
 from src.lobby.lobby import LobbyNS
 from src.room.room import RoomNS
 from src.auth import auth_bp
 from REST.routes import api as api_blueprint
-from models import db, bcrypt, socketio
+from models import db, bcrypt
 
 import os
 
+
 def create_app():
     app = Flask(__name__)
-    CORS(app)
-    app.debug = True
+
+    is_production = os.environ.get('NODE_ENV') == 'production'
+    app.debug = not is_production
+
     app.config['SECRET_KEY'] = os.getenv('MAKEASTORY_SOCKETIO_APP_KEY')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'chave-jwt')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game_data.db'
+
+    default_db = 'sqlite:///game_data.db'
+    db_url = os.environ.get('DATABASE_URL', default_db)
+    
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     
     db.init_app(app)
     bcrypt.init_app(app)
     jwt = JWTManager(app)
+
+    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    
+    CORS(app, resources={
+        r"/auth/*": {"origins": frontend_url},
+        r"/api/*": {"origins": frontend_url}
+    })
+    
+    socketio = SocketIO(cors_allowed_origins=frontend_url)
 
     app.register_blueprint(auth_bp)       # Registra /auth/register, /auth/login, etc.
     app.register_blueprint(api_blueprint) # Registra /api/rooms, /api/rooms/<id>/join, etc.

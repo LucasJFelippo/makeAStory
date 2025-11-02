@@ -5,7 +5,8 @@ import axios from 'axios';
 import './RoomSelector.css';
 
 // Conecta ao namespace Raiz (Lobby)
-const LOBBY_URL = 'http://localhost:5000';
+const RENDER_URL = 'https://seu-backend.onrender.com';
+const LOBBY_URL = RENDER_URL;
 
 function RoomSelector() {
     const [rooms, setRooms] = useState([]);
@@ -46,7 +47,7 @@ function RoomSelector() {
         try {
             // A API REST para criar salas ainda é válida
             const response = await axios.post(
-                'http://localhost:5000/api/rooms',
+                `${RENDER_URL}/api/rooms`,
                 {},
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );

@@ -1,0 +1,12 @@
+Flask
+Flask-SocketIO
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-CORS
+Flask-Bcrypt
+gunicorn
+psycopg2-binary
+requests
+openai
+gevent
+gevent-websocket

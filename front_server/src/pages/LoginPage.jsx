@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './AuthForm.css';
 
-const LOGIN_URL = 'http://localhost:5000/auth/login';
-const GUEST_LOGIN_URL = 'http://localhost:5000/auth/guest_login';
+const RENDER_URL = 'https://seu-backend.onrender.com';
+const LOGIN_URL = `${RENDER_URL}/auth/login`;
+const GUEST_LOGIN_URL = `${RENDER_URL}/auth/guest_login`;
 
 function LoginPage() {
     const [username, setUsername] = useState('');
