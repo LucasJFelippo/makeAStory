@@ -8,7 +8,7 @@ from src.lobby.lobby import LobbyNS
 from src.room.room import RoomNS
 from src.auth import auth_bp
 from REST.routes import api as api_blueprint
-from models import db, bcrypt
+from models import db, bcrypt, socketio
 
 import os
 
@@ -43,18 +43,16 @@ def create_app():
          headers=["Content-Type", "Authorization"], 
          supports_credentials=True
     )
-    
-    socketio = SocketIO(cors_allowed_origins=frontend_url)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_blueprint)
     
     lobby_handler = LobbyNS(app)
     room_handler = RoomNS(socketio, app)
-
     socketio.on_namespace(lobby_handler)
     socketio.on_namespace(room_handler)
 
-    socketio.init_app(app)
-
+    socketio.init_app(app, 
+                      cors_allowed_origins=frontend_url,
+                      async_mode='gevent')
     return app, socketio

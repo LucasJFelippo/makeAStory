@@ -6,7 +6,7 @@ from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
-socketio = SocketIO(cors_allowed_origins='*')
+socketio = SocketIO()
 
 
 game_participants = db.Table('game_participants',
