@@ -21,6 +21,7 @@ class RoomNS(Namespace):
     def __init__(self, namespace, socketio):
         super().__init__(namespace)
         self.socketio = socketio
+        self.app = app
 
     def _get_auth_info(self):
         user_id = session.get('user_id')
