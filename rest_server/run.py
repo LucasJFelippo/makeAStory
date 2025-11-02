@@ -32,5 +32,9 @@ with app.app_context():
             db.session.rollback()
 
 if __name__ == "__main__":
-    print(f"Iniciando servidor local (Debug: {app.debug})...")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=app.debug)
+    port = int(os.environ.get("PORT", 5000)) 
+    print(f"Iniciando servidor (Debug: {app.debug}) na porta {port}...")
+    socketio.run(app, 
+                 host='0.0.0.0', 
+                 port=port, 
+                 debug=app.debug)
