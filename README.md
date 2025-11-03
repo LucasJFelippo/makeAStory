@@ -17,12 +17,6 @@ O fluxo principal do jogo é o seguinte:
 
 O projeto é um monorepo que contém duas aplicações principais: `front_server` (o cliente) e `rest_server` (o servidor).
 
-makeAStory/ ├── front_server/ # Aplicação Front-end (React + Vite) │ ├── public/ │ │ └── Background.jpg # Imagem de fundo principal │ ├── src/ │ │ ├── pages/ │ │ │ ├── LoginPage.jsx
-
-│ │ │ ├── RegisterPage.jsx │ │ │ ├── RoomSelector.jsx # O Lobby │ │ │ └── ChatRoom.jsx # A Sala de Jogo │ │ ├── App.jsx # Roteador principal (React Router) │ │ └── main.jsx # Ponto de entrada do React │ └── package.json # Dependências do front-end (React, Axios, Socket.io-client) │ └── rest_server/ # Aplicação Back-end (Python + Flask) ├── src/ │ ├── lobby/ │ │ └── lobby.py # Lógica do WebSocket para o Lobby (Namespace '/') │ ├── room/ │ │ └── room.py # Lógica do WebSocket para a Sala (Namespace '/r') │ ├── llm/ │ │ └── gpt.py # Lógica de chamada da API OpenAI │ ├── REST/ │ │ └── routes.py # Endpoints da API REST (ex: /api/rooms) │ ├── auth.py # Endpoints da API REST de autenticação (/auth/...) │ ├── data.py # Estruturas de dados em memória e prompts da IA │ ├── main.py # Fábrica de aplicação (create_app) │ └── log.py # Configuração de logging ├── models.py # Modelos do banco de dados (SQLAlchemy) ├── run.py # Ponto de entrada do servidor (Inicia o app Flask/Socket.IO) └── requirements.txt # Dependências do back-end (Flask, Socket.IO, OpenAI, etc.)
-
-### Back-end (`rest_server`)
-
 O servidor Flask opera de forma híbrida:
 
 1.  **API REST (Stateless):** Usada para ações que não exigem tempo real.
