@@ -16,24 +16,28 @@ from src.llm.gpt import submit_round
 
 from src.log import logger
 
-
+# --- Classe Principal da Sala de Chat ---
 class RoomNS(Namespace):
+    # Inicializa a classe, recebe o app Flask para usar o DB
     def __init__(self, socketio, app):
         super().__init__('/r')
         self.socketio = socketio
         self.app = app
 
+    # Pega a lista de nomes de usuários de uma sala
     def _get_user_list(self, room_id):
         if room_id in ROOMS:
             members = ROOMS[room_id]['room_members']
             return [member_data.get('username', member_id) for member_id, member_data in members.items()]
         return []
 
+    # Envia a lista de usuários atualizada para todos na sala
     def _broadcast_user_list(self, room_id):
         user_list = self._get_user_list(room_id)
         logger.info(f"[ROOM {room_id}] Transmitindo lista de usuários: {user_list}")
         self.socketio.emit('user_list_update', {'users_list': user_list}, to=room_id, namespace='/r')
 
+    # Envia a lista de salas atualizada para o LOBBY (namespace '/')
     def _broadcast_lobby_update(self):
         try:
             with self.app.app_context():
@@ -48,6 +52,7 @@ class RoomNS(Namespace):
         except Exception as e:
             logger.error(f"Erro ao transmitir atualização do lobby: {e}")
 
+    # Pega o ID e username do usuário da sessão do socket
     def _get_auth_info(self):
         user_id = session.get('user_id')
         username = session.get('username', 'Convidado')
@@ -55,6 +60,9 @@ class RoomNS(Namespace):
             logger.warning("Tentativa de ação no RoomNS sem user_id na sessão")
         return user_id, username
 
+    # --- Eventos de Socket (Socket Handlers) ---
+
+    # Chamado quando o front-end tenta se conectar ao namespace '/r'
     def on_connect(self, auth):
         token = auth.get('token') if auth else None
 
@@ -83,7 +91,7 @@ class RoomNS(Namespace):
             raise ConnectionRefusedError('unauthorized - invalid token')
         emit('connect_confirm', {'sid': request.sid})
 
-
+    # Chamado quando o front-end emite 'join_room'
     def on_join_room(self, data):
         user_id, username = self._get_auth_info()
         if not user_id:
@@ -147,7 +155,7 @@ class RoomNS(Namespace):
                     logger.warning(f'[ROOM] User {username} (ID: {user_id}) tentou entrar na sala {room_id} (cheia no cache)')
                     return {'status': 'error', 'msg': 'A sala está cheia', 'room_id': room_id}
                 
-
+                # Adiciona o usuário na lista de participantes do DB
                 if user not in game_room_db.participants:
                     game_room_db.participants.append(user)
                     db.session.commit()
@@ -160,6 +168,7 @@ class RoomNS(Namespace):
                 else:
                     logger.info(f'[ROOM {room_id}] User {username} (ID: {user_id}) entrou (cache)')
 
+                # Adiciona o usuário ao cache da sala
                 ROOMS[room_id]['room_members'][user_id] = {
                     'user_id': user_id,
                     'username': username,
@@ -180,6 +189,7 @@ class RoomNS(Namespace):
                 db.session.rollback()
                 return {'status': 'error', 'msg': 'Erro interno ao entrar na sala.'}
 
+    # Chamado quando o usuário fecha a aba ou desconecta
     def on_disconnect(self):
         user_id, username = self._get_auth_info()
 
@@ -193,6 +203,7 @@ class RoomNS(Namespace):
         # Remove o cliente do canal de broadcast
         leave_room(room_id)
 
+        # Se o usuário estava no meio de uma rodada sem enviar
         if room:
             member_data = room.get('room_members', {}).get(user_id)
             if room['room_state'] == RoomState.SNIPPETING and member_data and not member_data.get('submitted'):
@@ -213,6 +224,7 @@ class RoomNS(Namespace):
 
         db_operations_done = False
 
+        # Remove o usuário do DB
         with self.app.app_context():
             user = User.query.get(user_id)
             game_room_db = GameRoom.query.get(room_id)
@@ -260,7 +272,7 @@ class RoomNS(Namespace):
         if db_operations_done:
             self._broadcast_lobby_update()
         
-
+    # Chamado quando o front-end emite 'start_game'
     def on_start_game(self):
         user_id, username = self._get_auth_info()
 
@@ -287,8 +299,8 @@ class RoomNS(Namespace):
 
         self.start_game(USER_ROOM_MAP[user_id], user_id)
 
-
-    def on_story_snippet(self, data): # ADICIONAR USUARIO
+    # Chamado quando o front-end emite 'story_snippet'
+    def on_story_snippet(self, data):
         user_id, username = self._get_auth_info()
 
         if not user_id in USER_ROOM_MAP:
@@ -332,8 +344,8 @@ class RoomNS(Namespace):
 
         return {'status': 'ok'}
     
-
-    
+    # --- Funções Internas da Lógica de Jogo ---
+    # Inicia o jogo e a primeira rodada
     def start_game(self, room_id, user_id):
         room = ROOMS[room_id]
         
@@ -346,6 +358,7 @@ class RoomNS(Namespace):
         self.socketio.emit('game_started', {'triggerer': triggerer_username}, to=room_id, namespace='/r')
         self.start_round(room_id, 'game_start')
 
+    # Prepara a sala para uma nova rodada de snippets
     def start_round(self, room_id, trigger = None):
         room = ROOMS[room_id]
         room['room_state'] = RoomState.SNIPPETING
@@ -362,8 +375,8 @@ class RoomNS(Namespace):
             'triggerer': trigger, 
             'round': room['current_round']
         }, to=room_id, namespace='/r')
-        # TODO: Implementar timer
 
+    # Encerra a rodada de snippets e inicia o processamento da IA
     def end_round(self, room_id, trigger):
         room = ROOMS[room_id]
         room['room_state'] = RoomState.RESPONSE
@@ -393,6 +406,7 @@ class RoomNS(Namespace):
         self.socketio.emit('round_ended', {'snippets': snippets}, to=room_id, namespace='/r')
         self.socketio.start_background_task(self.process_round, room_id, snippets, self.app)
 
+    # Função que roda em segundo plano (background task)
     def process_round(self, room_id, snippets, app):
         with app.app_context():
             room = ROOMS[room_id]

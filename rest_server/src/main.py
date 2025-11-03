@@ -31,6 +31,9 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     
+    app.config['SQLALCHEMY_POOL_PRE_PING'] = True 
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = 300
+    
     db.init_app(app)
     bcrypt.init_app(app)
     jwt = JWTManager(app)

@@ -18,12 +18,13 @@ function ChatRoom() {
     const chatEndRef = useRef(null);
     const navigate = useNavigate();
 
+    // Rolar para o fim da página
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Roda UMA VEZ quando o componente carrega para configurar o chat
     useEffect(() => {
-        // 1. AUTENTICAÇÃO: Pega o token do storage
         const token = localStorage.getItem('token');
 
         if (!token) {
@@ -32,12 +33,14 @@ function ChatRoom() {
             return;
         }
 
+        // Conecta ao servidor Socket.IO
         const newSocket = io(ROOM_URL, {
             auth: {
                 token: token
             }
         });
 
+        // Quando a conexão é estabelecida com sucesso
         newSocket.on('connect', () => {
             newSocket.emit('join_room', { room_id: parseInt(roomId) }, (ack) => {
                 if (ack && ack.status === 'ok') {
@@ -50,65 +53,64 @@ function ChatRoom() {
             });
         });
 
-        // Ouve o 'connect_ack'
+        // Servidor confirma a conexão (apenas log)
         newSocket.on('connect_ack', () => {
             setStatus(`✔ Conexão estabelecida`);
         });
 
-        // 4. MUDANÇA DE EVENTO: Ouvir 'status_update'
-        //
+        // Ouve por msgs do sistema
         newSocket.on('status_update', (data) => {
             const msg = { type: 'system', text: data.msg };
             setMessages((prev) => [...prev, msg]);
         });
 
-        // 5. MUDANÇA DE EVENTO: 'snippet_broadcast' -> 'round_ended'
-        //
+        // Ouve pelo fim da rodada
         newSocket.on('round_ended', (data) => {
-            // --- 2. ATIVE O INDICADOR AQUI ---
             setIsAiThinking(true);
 
             if (data && data.snippets) {
+                // Mapeia os snippets de todos e adiciona ao chat
                 const newMsgs = data.snippets.map(item => ({
                     type: 'snippet',
                     text: item.snippet,
-                    sender: item.sender_username // Back-end agora envia 'sender_username'
+                    sender: item.sender_username
                 }));
                 setMessages((prev) => [...prev, ...newMsgs]);
             }
         });
 
-        // 6. MUDANÇA DE EVENTO: 'ai_response' -> 'new_story_part' (É AQUI QUE A MÚSICA CHEGA!)
-        //
+        // A IA terminou
         newSocket.on('new_story_part', (data) => {
-            // --- 3. DESATIVE O INDICADOR AQUI ---
             setIsAiThinking(false);
 
             const msg = {
                 type: 'ai_response',
-                story: data.text, // Back-end envia 'text'
-                image_url: data.image_url, // (ainda nulo, mas pronto)
-                song_url: data.music_url // Back-end envia 'music_url'
+                story: data.text,
+                image_url: data.image_url,
+                song_url: data.music_url
             };
             setMessages((prev) => [...prev, msg]);
         });
 
+        // Atualiza o drawer
         newSocket.on('user_list_update', (data) => {
             setUsers(data.users_list || []);
         });
-        // 7. NOVO EVENTO: 'snippet_received'
-        //
+
+        // Aviso de que um usuário enviou um snippet
         newSocket.on('snippet_received', (data) => {
             const msg = { type: 'system', text: `Recebido de: ${data.username}` };
             setMessages((prev) => [...prev, msg]);
         });
 
-        // 8. Ouve 'game_started' e 'round_started'
+        // O jogo começou
         newSocket.on('game_started', (data) => {
             setIsGameStarted(true);
             const msg = { type: 'system', text: `🎮 Jogo iniciado por ${data.triggerer}` };
             setMessages((prev) => [...prev, msg]);
         });
+
+        // Uma nova rodada começou
         newSocket.on('round_started', (data) => {
             setIsAiThinking(false);
             setIsGameStarted(true);
@@ -123,11 +125,15 @@ function ChatRoom() {
             }
         });
 
+        // Salva o objeto do socket no estado do React
         setSocket(newSocket);
+
         return () => newSocket.disconnect();
     }, [roomId, navigate]);
 
-    // Envio de snippet (O 'ack' está correto pois room.py usa 'return')
+    // --- Funções de Envio (Handlers) ---
+
+    // Envia um snippet
     const handleSendMessage = (e) => {
         e.preventDefault();
         if (socket && myMessage) {
@@ -142,7 +148,7 @@ function ChatRoom() {
         }
     };
 
-    // Iniciar jogo (O 'ack' está correto pois room.py usa 'return' para erros)
+    // Envia o comando para iniciar o jogo
     const handleStartGame = () => {
         if (socket) {
             socket.emit('start_game', (ack) => {
@@ -150,13 +156,12 @@ function ChatRoom() {
                     const msg = { type: 'system', text: `❌ ${ack.msg}` };
                     setMessages((prev) => [...prev, msg]);
                 }
-                // Se der sucesso, o back-end não retorna ack,
-                // mas emite 'game_started', o que é o ideal.
             });
         }
     };
 
-    // Função de renderização ATUALIZADA para exibir a música
+    // --- Renderização ---
+
     const renderMessage = (msg, index) => {
         if (msg.type === 'ai_response') {
             return (
@@ -167,11 +172,10 @@ function ChatRoom() {
                         <img src={msg.image_url} alt="História gerada" style={{ maxWidth: '100%' }} />
                     }
 
-                    {/* === AQUI ESTÁ A MÚSICA! === */}
                     {msg.song_url && (
-                        <div className="audio-container"> {/* NOVO WRAPPER */}
-                            <p className="audio-title">Música da Rodada:</p> {/* CLASSE NOVA */}
-                            <audio controls src={msg.song_url} className="custom-audio-player"> {/* CLASSE NOVA */}
+                        <div className="audio-container">
+                            <p className="audio-title">Música da Rodada:</p>
+                            <audio controls src={msg.song_url} className="custom-audio-player">
                                 Seu navegador não suporta a tag de áudio.
                             </audio>
                         </div>
@@ -182,7 +186,6 @@ function ChatRoom() {
         if (msg.type === 'system') {
             return <div key={index} className="system-message"><b>{msg.text}</b></div>;
         }
-        // (msg.type === 'snippet')
         return (
             <div key={index} className="user-message">
                 <strong>{msg.sender || 'User'}:</strong> {msg.text}
@@ -190,7 +193,7 @@ function ChatRoom() {
         );
     };
 
-    // JSX (sem mudanças)
+    // Estrutura visual da página
     return (
         <div className="chat-layout">
             <div className="drawer">
@@ -221,18 +224,16 @@ function ChatRoom() {
                     <div ref={chatEndRef} />
                 </div>
 
-                {/* --- 5. ADICIONE O BLOCO JSX DO INDICADOR AQUI --- */}
                 {isAiThinking && (
                     <div className="ai-thinking-indicator">
                         <div className="spinner"></div>
                         <span>IA está processando...</span>
                     </div>
                 )}
-                {/* --- FIM DO BLOCO --- */}
 
                 <div className="chat-actions">
                     <button onClick={handleStartGame} disabled={isGameStarted}>
-                       Gerar História (IA)
+                        Gerar História (IA)
                     </button>
                 </div>
                 <form onSubmit={handleSendMessage} className="message-input-form">
